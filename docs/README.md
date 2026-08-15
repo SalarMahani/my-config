@@ -13,6 +13,7 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [kitty-guide.md](kitty-guide.md) | The terminal — fonts, themes, the theme-marker mechanism | Terminal colours, font size, ligatures, scrollback |
 | [rofi-guide.md](rofi-guide.md) | The launcher — modes, the rasi language, the widget tree | `$mod+space` behaves oddly, or you want to resize/restyle the popup |
 | [mako-guide.md](mako-guide.md) | Notifications — sender vs displayer, criteria, do-not-disturb | Notifications look wrong, do not appear, or stay too long |
+| [vscode-guide.md](vscode-guide.md) | VS Code — settings, Vim mode, keybindings, extensions | Editor settings, a keybinding not firing, setting up a new machine |
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
 | [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, leader key, netrw | Editing settings, indentation, adding mappings |
 
@@ -42,6 +43,7 @@ you saved a file. How a change is applied differs per program:
 | mako | `makoctl reload` |
 | zsh | New terminal, or `exec zsh` |
 | vim | `:source ~/.vimrc`, or restart |
+| VS Code | Nothing — settings apply live |
 
 The exception worth memorising: **`swayidle`'s timers are on an `exec` line, so
 `$mod+Shift+c` does NOT apply changes to them.** You must `pkill -x swayidle`

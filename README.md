@@ -38,6 +38,7 @@ shell/.zshrc               ->   ~/.zshrc
 | `kitty` | Terminal config and current theme |
 | `rofi` | Launcher theme |
 | `mako` | Notification daemon styling |
+| `vscode` | VS Code `settings.json`, `keybindings.json`, extension list |
 | `shell` | `.zshrc`, `.zshenv`, `.bashrc`, `.profile`, `.p10k.zsh` |
 | `vim` | `.vimrc` |
 | `git` | `.gitconfig` |
@@ -52,6 +53,11 @@ This is deliberately **GNU stow's package format**. Nothing here needs stow —
 **directories**, so a new script dropped into `sway/.config/sway/scripts/` is
 picked up with no re-run. The `$HOME` dotfiles are linked per **file**, so
 nothing else in your home directory gets swept in.
+
+⚠️ `vscode` **must** stay per-file. `~/.config/Code` is 549 MB of caches,
+extension packages and `globalStorage` (which holds extension auth tokens) —
+directory-linking it would commit all of that and publish credentials. Only
+three files, 48 KB, are tracked.
 
 ⚠️ `wallpapers` **must** stay a directory link. `wallpaper-next.sh` searches with
 `find -L … -type f`; a plain per-file symlink is `-type l`, so the search would
@@ -241,7 +247,27 @@ EOF
 
 Optional; the shell works fine without it.
 
-## 5. Make zsh your login shell
+## 5. Restore VS Code extensions
+
+Cloning the repo brings your settings and keybindings, but **not** the
+extensions — those are hundreds of megabytes and live outside the config
+directory. The tracked list reinstalls them:
+
+```bash
+xargs -n1 code --install-extension < ~/.config/Code/User/extensions.txt
+```
+
+Three of them are named directly in `settings.json` (the Monokai theme,
+Material icons and Prettier), so skipping this leaves settings pointing at
+things that do not exist. See [docs/vscode-guide.md](docs/vscode-guide.md).
+
+Optional, referenced by `editor.fontFamily` but not installed here:
+
+```bash
+sudo dnf install jetbrains-mono-fonts
+```
+
+## 6. Make zsh your login shell
 
 ```bash
 chsh -s /bin/zsh
@@ -249,7 +275,7 @@ chsh -s /bin/zsh
 
 Takes effect at the next login, not immediately.
 
-## 6. Log out and back into sway
+## 7. Log out and back into sway
 
 Then check:
 
@@ -266,7 +292,7 @@ Then check:
 **The first zsh start pauses for a few seconds.** That is zinit cloning itself
 and the four plugins — it is not a hang, and it happens only once.
 
-## 7. Adjust for the new hardware
+## 8. Adjust for the new hardware
 
 Two things are specific to this laptop and will need editing:
 

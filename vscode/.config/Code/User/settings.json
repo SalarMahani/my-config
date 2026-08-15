@@ -1,0 +1,179 @@
+{
+  //---------- Editor Interface
+  "workbench.colorTheme": "Monokai Pro (Filter Spectrum)",
+  "workbench.iconTheme": "Monokai Pro (Filter Spectrum) Icons",
+  "editor.lineNumbers": "on",
+  "editor.minimap.enabled": false,
+  "editor.renderLineHighlight": "none",
+  "workbench.startupEditor": "none",
+  "workbench.navigationControl.enabled": false,
+  "workbench.editor.enablePreview": false,
+  
+  //---------- Anti-Scrolling & Performance (Fixes your "Top to Bottom" issue)
+  "editor.smoothScrolling": false,
+  "workbench.list.smoothScrolling": false,
+  "editor.cursorSmoothCaretAnimation": "off",
+  "editor.scrollBeyondLastLine": false,
+  "editor.revealHorizontalRightPadding": 0,
+  "explorer.autoReveal": false, // Keeps the sidebar from jumping
+  "editor.occurrencesHighlight": "off", // Prevents jumping to matching words on open
+
+  //---------- Vim General Configuration
+  "vim.leader": "<space>",
+  "vim.useSystemClipboard": true,
+  "vim.hlsearch": true,
+  "vim.incsearch": true,
+  "vim.easymotion": true,
+  "vim.sneak": true,
+  "vim.surround": true,
+  "vim.scrolloff": 13,
+  "editor.cursorSurroundingLines": 13, // Matches Vim scrolloff
+
+  //---------- Vim Normal Mode
+  "vim.normalModeKeyBindingsNonRecursive": [
+    {
+      "before": ["<leader>", "d"],
+      "commands": ["editor.action.showHover"]
+    },
+    {
+      "before": ["<leader>", "s"],
+      "commands": ["workbench.action.files.save"]
+    },
+    {
+      "before": ["<leader>", "f"],
+      "commands": ["workbench.action.closeActiveEditor"]
+    },
+    {
+      "before": ["I"],
+      "commands": ["workbench.action.terminal.kill"]
+    },
+    {
+      "before": ["L"],
+      "after": ["$"]
+    },
+    {
+      "before": ["H"],
+      "after": ["^"]
+    },
+    {
+      "before": [","],
+      "commands": ["workbench.action.previousEditor"]
+    },
+    {
+      "before": ["."],
+      "commands": ["workbench.action.nextEditor"]
+    },
+
+    {
+      "before": ["<"],
+      "commands": ["workbench.action.moveEditorLeftInGroup"]
+    },
+    {
+      "before": [">"],
+      "commands": ["workbench.action.moveEditorRightInGroup"]
+    },
+    {
+      "before": ["<leader>", "e"],
+      "commands": ["editor.action.quickFix"]
+    },
+    {
+      "before": ["<leader>", "w"],
+      "commands": ["workbench.action.openGlobalKeybindings"]
+    },
+
+    {
+      "before": ["<leader>", "j"],
+      "commands": ["breadcrumbs.focus"]
+    },
+    {
+      "before": ["<leader>", "s","l"],
+      "commands": ["workbench.action.moveEditorToLeftGroup"]
+    },
+    {
+      "before": ["<leader>", "s","r"],
+      "commands": ["workbench.action.moveEditorToRightGroup"]
+    },
+    {
+    "before": ["/"],
+    "commands": ["actions.find"]
+    },
+
+    {
+    "before": ["<leader>", "a"],
+    "commands": ["workbench.view.explorer"]
+    },
+
+    {
+    "before": ["<leader>", "l"],
+    "commands": ["workbench.action.terminal.focus"]
+    },
+  ],
+
+  //---------- Vim Visual Mode
+  "vim.visualModeKeyBindingsNonRecursive": [
+    {
+      "before": ["L"],
+      "after": ["$"]
+    },
+    {
+      "before": ["H"],
+      "after": ["^"]
+    },
+    {
+      "before": ["J"],
+      "commands": ["editor.action.moveLinesDownAction"]
+    },
+    {
+      "before": ["K"],
+      "commands": ["editor.action.moveLinesUpAction"]
+    }
+  ],
+
+  //---------- Vim Insert Mode (Intellisense Nav)
+  "vim.insertModeKeyBindings": [
+    {
+      "before": ["<C-j>"],
+      "commands": ["selectNextSuggestion"]
+    },
+    {
+      "before": ["<C-k>"],
+      "commands": ["selectPrevSuggestion"]
+    }
+  ],
+
+  //---------- Formatting & Linting
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "files.autoSave": "onFocusChange",
+  "prettier.requireConfig": true,
+  "cSpell.enabled": false,
+
+  //---------- UI Colors (Visual Mode Hover fix)
+  "workbench.colorCustomizations": {
+    "editor.selectionBackground": "#44475aab",
+    "editor.hoverHighlightBackground": "#ffb86c30", // Lowered opacity to avoid "white" look
+    "editor.selectionHighlightBackground": "#6272a450"
+  },
+
+  //---------- Typography
+  "editor.fontFamily": "'Source Code Pro', 'JetBrains Mono', 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "terminal.integrated.fontSize": 12,
+
+  //---------- Advanced System
+  "keyboard.dispatch": "keyCode",
+  "window.commandCenter": false,
+  "terminal.integrated.lineHeight": 1.3,
+  "terminal.integrated.stickyScroll.maxLineCount": 6,
+  "chat.disableAIFeatures": true,
+  "material-icon-theme.activeIconPack": "react",
+  "breadcrumbs.icons": false,
+  "breadcrumbs.showFunctions": false,
+  "workbench.activityBar.location": "hidden",
+  "color-highlight.matchHslWithNoFunction": true
+
+}
+
+
+
+
