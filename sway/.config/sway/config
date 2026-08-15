@@ -1,7 +1,7 @@
 # Sway configuration — albos / Fedora 44 / Acer laptop (Intel i915)
 #
 # Full prose guide, including the reasoning behind the workspace scheme:
-#   ~/Desktop/doc/README.md   (tracked at ~/dotfiles/docs/sway-guide.md)
+#   ~/dotfiles/docs/sway-guide.md
 #
 # Reference: man 5 sway.  Validate an edit with `sway --validate` BEFORE
 # reloading with $mod+Shift+c.

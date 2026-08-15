@@ -37,30 +37,35 @@ shell/.zshrc               ->   ~/.zshrc
 | `waybar` | Bar modules (`config.jsonc`) and styling (`style.css`) |
 | `kitty` | Terminal config and current theme |
 | `rofi` | Launcher theme |
-| `shell` | `.zshrc`, `.bashrc`, `.profile` |
+| `shell` | `.zshrc`, `.zshenv`, `.bashrc`, `.profile`, `.p10k.zsh` |
 | `vim` | `.vimrc` |
 | `git` | `.gitconfig` |
-| `docs` | The full sway guide — **not** installed, reference only |
+| `wallpapers` | 12 images → `~/Pictures/wallpapers` |
+| `docs` | The guides — **not** installed, reference only |
 
 This is deliberately **GNU stow's package format**. Nothing here needs stow —
 `install.sh` has no dependencies — but if you ever `dnf install stow`, then
 `stow sway` from this directory does the same job with no restructuring.
 
-`sway`, `waybar`, `kitty` and `rofi` are linked as whole **directories**, so a
-new script dropped into `sway/.config/sway/scripts/` is picked up with no
-re-run. The `$HOME` dotfiles are linked per **file**, so nothing else in your
-home directory gets swept in.
+`sway`, `waybar`, `kitty`, `rofi` and `wallpapers` are linked as whole
+**directories**, so a new script dropped into `sway/.config/sway/scripts/` is
+picked up with no re-run. The `$HOME` dotfiles are linked per **file**, so
+nothing else in your home directory gets swept in.
+
+⚠️ `wallpapers` **must** stay a directory link. `wallpaper-next.sh` searches with
+`find -L … -type f`; a plain per-file symlink is `-type l`, so the search would
+return zero images and the cycler would silently stop working.
 
 ## Not tracked, on purpose
 
 - **`~/.config/gtk-3.0` and `gtk-4.0`** — app-managed, rewritten by GTK itself,
   and full of binary assets. Tracking them produces noisy diffs you would learn
   to ignore, which defeats the point.
-- **Secrets and machine-specific settings** — put them in `~/.zshrc.local`,
-  which `.gitignore` covers. Never commit tokens or keys.
-- **`~/Pictures/wallpapers/`** — referenced by the sway config and `lock.sh`,
-  but images do not belong in a config repo. On a fresh machine you must
-  restore these separately or the lock screen falls back to a blank image.
+- **Secrets, identity and machine-specific settings** — these live in
+  `~/.zshrc.local`, `~/.bashrc.local` and `~/.gitconfig.local`, all covered by
+  `.gitignore`. The tracked configs source them if present. See
+  [docs/shell-guide.md §2](docs/shell-guide.md#2-the-local-split--what-makes-this-repo-shareable).
+- **FiraCode Nerd Font** — 50M and owned by no package. A bootstrap step below.
 
 ## Editing sway safely
 
@@ -108,6 +113,194 @@ order.
 
 ## Full documentation
 
-`docs/sway-guide.md` is a complete guide to this setup — how sway works, every
-config section explained, the workspace scheme, keybindings, known issues, and
-a troubleshooting cookbook. It is also symlink-readable at `~/Desktop/doc/`.
+[`docs/`](docs/README.md) has a guide per program — sway, waybar, kitty, rofi,
+the shell and vim. Each walks through the actual config file, explains why it is
+the way it is, and ends with recipes and troubleshooting. Start at
+[docs/README.md](docs/README.md).
+
+---
+
+# Setting up on a new machine
+
+Written for **Fedora**. On another distribution the package names differ but the
+steps do not.
+
+## 1. Install the dependencies
+
+Every package below is here because something in this repo actually calls it —
+the list was built by resolving each binary the configs invoke back to its
+owning RPM, not from memory.
+
+```bash
+sudo dnf install -y \
+  sway swaylock swayidle swaybg \
+  waybar kitty rofi \
+  zsh zsh-autosuggestions zsh-syntax-highlighting \
+  eza jq python3 git vim-enhanced \
+  libnotify grimshot brightnessctl pulseaudio-utils wl-clipboard \
+  papirus-icon-theme mako
+```
+
+⚠️ **`mako` is not currently installed on the original machine, and should be.**
+`libnotify` provides `notify-send`, which *sends* notifications — but nothing on
+this system *displays* them. Worse, D-Bus still advertises
+`org.freedesktop.Notifications` as activatable (a leftover KDE registration), so
+`notify-send` blocks for **85 seconds** trying to start a daemon that does not
+exist. `wallpaper-next.sh` now detaches and time-limits its notification so this
+cannot hang a keybinding, but installing `mako` is the real fix and makes
+notifications actually appear:
+
+```bash
+sudo dnf install mako
+```
+
+Then add it to the sway config's startup section (§6): `exec_always mako`.
+
+What each is for, so you can drop what you do not want:
+
+| Package | Needed by |
+|---|---|
+| `sway` | The compositor. Also provides `swaymsg` and `swaynag` |
+| `swaylock` `swayidle` `swaybg` | Lock screen, idle timers, wallpaper |
+| `waybar` | The status bar |
+| `kitty` | Terminal (`$mod+Return`) |
+| `rofi` | Launcher (`$mod+space`) |
+| `zsh` | The login shell |
+| `zsh-autosuggestions` `zsh-syntax-highlighting` | Installed for completeness — **the config loads its own copies via zinit**, so these are optional |
+| `eza` | The `ls` / `ll` / `la` aliases |
+| `jq` | Used when inspecting sway's IPC output |
+| `python3` | `ws-cycle.py`, the workspace navigation script |
+| `git` | Cloning this repo, and zinit self-installs with it |
+| `vim-enhanced` | The editor. **Not** `vim` — on Fedora that is a metapackage; `vim-enhanced` is what provides `/usr/bin/vim` |
+| `libnotify` | `notify-send`, used by `wallpaper-next.sh` — sends notifications |
+| `mako` | **Displays** them. Without it notify-send blocks ~85s and nothing appears |
+| `grimshot` | Screenshots (`Print`, bound by Fedora's sway config.d) |
+| `brightnessctl` `pulseaudio-utils` | Brightness and volume keys |
+| `wl-clipboard` | `wl-copy` / `wl-paste` |
+| `papirus-icon-theme` | Application icons in rofi |
+
+## 2. Install the Nerd Font — `dnf` cannot do this
+
+**Do not skip this.** waybar, kitty and rofi all name `FiraCode Nerd Font`.
+Without it every icon renders as an empty box (▯) and the desktop looks broken
+in a way that is easy to misdiagnose as a config problem.
+
+It is not packaged — it must be downloaded:
+
+```bash
+mkdir -p ~/.local/share/fonts/FiraCodeNerdFont
+cd /tmp
+curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip
+unzip -o FiraCode.zip -d ~/.local/share/fonts/FiraCodeNerdFont
+fc-cache -f
+```
+
+Verify — a non-zero count for **both**, since kitty needs the `Mono` variant:
+
+```bash
+fc-list | grep -c "FiraCode Nerd Font"
+fc-list | grep -c "FiraCode Nerd Font Mono"
+```
+
+## 3. Clone and link
+
+```bash
+git clone <your-repo-url> ~/dotfiles
+cd ~/dotfiles
+./install.sh --dry-run      # read this before applying
+./install.sh
+```
+
+Existing files are moved to `<path>.bak-YYYY-MM-DD`, never deleted.
+
+## 4. Create your private files
+
+The repo deliberately contains **no identity and no machine-specific paths**.
+Two files are yours to write, and neither is tracked:
+
+```bash
+cat > ~/.gitconfig.local <<'EOF'
+[user]
+	email = you@example.com
+	name = Your Name
+EOF
+```
+
+⚠️ **git will refuse to commit until this exists** — the tracked `.gitconfig`
+carries no `user.email`.
+
+```bash
+cat > ~/.zshrc.local <<'EOF'
+# PATH entries for locally installed apps, personal aliases, API tokens.
+EOF
+```
+
+Optional; the shell works fine without it.
+
+## 5. Make zsh your login shell
+
+```bash
+chsh -s /bin/zsh
+```
+
+Takes effect at the next login, not immediately.
+
+## 6. Log out and back into sway
+
+Then check:
+
+| Check | Expect |
+|---|---|
+| `sway --validate` | Silence |
+| `$mod+Return` | A kitty terminal |
+| `$mod+space` | The rofi launcher, with icons |
+| `$mod+.` / `$mod+,` | Move between workspaces on the current monitor |
+| `$mod+Shift+w` | The wallpaper changes |
+| The bar | Icons, not boxes |
+| A new terminal | The Powerlevel10k prompt, no setup wizard |
+
+**The first zsh start pauses for a few seconds.** That is zinit cloning itself
+and the four plugins — it is not a hang, and it happens only once.
+
+## 7. Adjust for the new hardware
+
+Two things are specific to this laptop and will need editing:
+
+**Monitor names and positions** — sway config §3 names `eDP-1` and `HDMI-A-1`.
+Get the real names with:
+
+```bash
+swaymsg -t get_outputs
+```
+
+Then update the `output` lines *and* the ten `workspace N output` parity pins.
+See [docs/sway-guide.md §6.3](docs/sway-guide.md#63-the-oddeven-scheme) — the
+odd/even scheme is driven entirely by those lines, and `ws-cycle.py` reads them
+at runtime rather than hardcoding anything.
+
+**Absolute paths** — two remain, both under `/home/albos/`:
+
+```bash
+grep -rn "/home/albos" ~/dotfiles --include=config --include="*.sh" | grep -v docs/
+```
+
+They are the wallpaper in sway config §4 and the lock image in
+`sway/.config/sway/scripts/lock.sh`.
+
+## What you will still be missing
+
+Deliberately not tracked, so nothing here is broken — just absent:
+
+- **GTK theming** (`~/.config/gtk-3.0`, `gtk-4.0`) — app-managed, excluded on purpose.
+- **Installed applications** — this repo configures programs, it does not install them.
+- **`~/.zsh_history`** — personal, and it would be a privacy leak.
+
+## Before you publish this repo
+
+- **Check for secrets:** `git log -p | grep -iE 'token|password|secret|api[_-]?key'`
+- **Identity and server paths** are already excluded via the `.local` pattern.
+  The `[safe] directory` entries in particular name real servers — keep them in
+  `~/.gitconfig.local`.
+- **The wallpapers are 23M**, so the repo is not tiny. That is deliberate: they
+  are load-bearing, since the sway config names `02.png` and `lock.sh` names
+  `lock-001.png`.

@@ -1,0 +1,54 @@
+# Documentation
+
+A guide per program. Each one walks through *your actual config file*, explains
+why it is the way it is, and ends with copy-pasteable recipes and a
+troubleshooting section.
+
+Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plasma.
+
+| Guide | Covers | Read it when |
+|---|---|---|
+| [sway-guide.md](sway-guide.md) | The compositor — tiling, the tree, outputs, keybindings, the odd/even workspace scheme, idle & lock | Windows, monitors, workspaces, keyboard shortcuts, anything about the desktop itself |
+| [waybar-guide.md](waybar-guide.md) | The status bar — modules, format strings, CSS styling | The bar shows the wrong thing, or you want to add/restyle a module |
+| [kitty-guide.md](kitty-guide.md) | The terminal — fonts, themes, the theme-marker mechanism | Terminal colours, font size, ligatures, scrollback |
+| [rofi-guide.md](rofi-guide.md) | The launcher — modes, the rasi language, the widget tree | `$mod+space` behaves oddly, or you want to resize/restyle the popup |
+| [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
+| [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, leader key, netrw | Editing settings, indentation, adding mappings |
+
+## Start here
+
+**Nothing works / the desktop looks broken** → [sway-guide.md](sway-guide.md),
+troubleshooting cookbook at the end.
+
+**Setting this up on a new machine** → the repo [README](../README.md), which has
+the dependency list and bootstrap order.
+
+**"Where does this setting live?"** → [sway-guide.md §4](sway-guide.md#4-where-config-lives-and-how-it-loads)
+maps every path that affects the session.
+
+## The one rule that explains most surprises
+
+Each of these programs is **separate**. There is no central settings database,
+nothing coordinates them, and none of them reloads automatically just because
+you saved a file. How a change is applied differs per program:
+
+| Program | Apply a change with |
+|---|---|
+| sway | `$mod+Shift+c` |
+| waybar | `$mod+Shift+c` (sway restarts it via `exec_always`) |
+| kitty | `Ctrl+Shift+F5`, or a new window |
+| rofi | Nothing — read fresh on every launch |
+| zsh | New terminal, or `exec zsh` |
+| vim | `:source ~/.vimrc`, or restart |
+
+The exception worth memorising: **`swayidle`'s timers are on an `exec` line, so
+`$mod+Shift+c` does NOT apply changes to them.** You must `pkill -x swayidle`
+and restart it, or log out.
+
+## Conventions
+
+- `$mod` is **Alt** (`Mod1`), not Super. Most sway tutorials online assume Super.
+- Config files live in `~/dotfiles/` and are symlinked into `$HOME`; editing
+  either path is the same act.
+- Anything personal or machine-specific lives in a `.local` file that git
+  ignores — see [shell-guide.md §2](shell-guide.md#2-the-local-split--what-makes-this-repo-shareable).

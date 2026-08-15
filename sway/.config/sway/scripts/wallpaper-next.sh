@@ -16,7 +16,8 @@ mapfile -t WALLPAPERS < <(find -L "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname
 COUNT=${#WALLPAPERS[@]}
 
 if [ "$COUNT" -eq 0 ]; then
-    notify-send "Wallpaper" "No images found in $WALLPAPER_DIR"
+    notify-send "Wallpaper" "No images found in $WALLPAPER_DIR" 2>/dev/null || true
+    echo "wallpaper-next: no images in $WALLPAPER_DIR" >&2
     exit 1
 fi
 
@@ -37,4 +38,14 @@ NEXT_WALLPAPER="${WALLPAPERS[$NEXT_INDEX]}"
 pkill swaybg 2>/dev/null
 swaymsg output "*" bg "$NEXT_WALLPAPER" fill
 
-notify-send "Wallpaper changed" "$(basename "$NEXT_WALLPAPER")"
+# Notifications are best-effort, detached, and time-limited.
+#
+# No notification daemon (mako/dunst/swaync) is installed here, yet D-Bus still
+# advertises org.freedesktop.Notifications as activatable because of a leftover
+# KDE service. So notify-send blocks trying to start something that will never
+# start: measured at 85 SECONDS before it gives up. Run bare, that made
+# $mod+Shift+w appear to hang and turned a successful change into exit 1.
+#
+# The wallpaper is already applied above, so the notification is pure garnish:
+# detach it, cap it at 3s, and never let it affect our exit status.
+( timeout 3 notify-send "Wallpaper changed" "$(basename "$NEXT_WALLPAPER")" >/dev/null 2>&1 & )

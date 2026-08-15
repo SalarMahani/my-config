@@ -1008,7 +1008,30 @@ git history.
 `Left`, `Up` and `Down` are now bound inside resize mode alongside the existing
 `Right`, matching the `h/j/k/l` bindings.
 
-### ℹ️ Issue 6: absolute paths remain in two places
+### ⚠️ Issue 6: no notification daemon is installed
+
+`libnotify` gives you `notify-send`, which *sends* notifications — but nothing on
+this machine *displays* them. No `mako`, `dunst` or `swaync` is installed.
+
+It is worse than notifications simply not appearing. D-Bus still advertises
+`org.freedesktop.Notifications` as activatable, left over from KDE, so
+`notify-send` blocks trying to start a daemon that will never start. Measured:
+**85 seconds** before it gives up.
+
+`wallpaper-next.sh` used to call it bare as its last command, so `$mod+Shift+w`
+appeared to hang for 85s and returned exit 1 even though the wallpaper had
+already changed. The script now detaches the call and caps it at 3s (85000ms →
+61ms), but that is damage control. The real fix:
+
+```bash
+sudo dnf install mako
+```
+
+then add `exec_always mako` to the config's startup section (§6). Fedora's own
+brightness and volume bindings in `/usr/share/sway/config.d/` also send
+notifications, so they are silently degraded too.
+
+### ℹ️ Issue 7: absolute paths remain in two places
 
 `$scripts` now covers the helper scripts, but the wallpaper in config §4 and the
 lock image in `lock.sh` are still absolute `/home/albos/...` paths. Harmless on
