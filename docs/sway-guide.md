@@ -744,7 +744,10 @@ it a second source of truth that could silently contradict the config.
 Both were removed *after* the first git commit, so they remain recoverable:
 
 ```bash
-git -C ~/dotfiles show 40291a3:sway/.config/sway/scripts/set-outputs.sh
+# Find the import commit by message rather than by hash — the history was
+# rewritten on 2026-08-15 to scrub a leaked client path, so hashes changed.
+commit=$(git -C ~/dotfiles log --format=%h --grep="Import existing dotfiles" | tail -1)
+git -C ~/dotfiles show "$commit:sway/.config/sway/scripts/set-outputs.sh"
 ```
 
 ---

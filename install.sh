@@ -24,11 +24,16 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=false
 STAMP="$(date +%F)"
 
-# Packages whose ~/.config/<app> directory is linked whole rather than
-# file-by-file. Use this when the app only ever reads the directory, so that
-# new files added to the repo appear without re-running this script.
-# Verified: sway reads its directory and writes nothing back into it.
-DIR_LINK_PACKAGES=" sway waybar kitty rofi "
+# Packages whose target directory is linked whole rather than file-by-file.
+# Two reasons to want this:
+#
+#   1. New files added to the repo appear without re-running this script.
+#      Verified: sway reads its config directory and writes nothing back.
+#   2. Some tools break on symlinked FILES. wallpaper-next.sh searches with
+#      `find -maxdepth 1 -type f`, and a symlink is -type l, not -type f — so
+#      per-file linking would make it find zero wallpapers and silently stop
+#      working. Linking the directory keeps the files inside it real.
+DIR_LINK_PACKAGES=" sway waybar kitty rofi wallpapers "
 
 info()  { printf '  %s\n' "$*"; }
 act()   { if $DRY_RUN; then printf '  [dry-run] %s\n' "$*"; else printf '  %s\n' "$*"; fi; }
@@ -80,12 +85,15 @@ install_package() {
 
     printf '\n%s\n' "$pkg"
 
-    # Whole-directory link for ~/.config/<app> style packages.
-    if [[ "$DIR_LINK_PACKAGES" == *" $pkg "* ]] && [ -d "$root/.config" ]; then
-        local appdir
-        while IFS= read -r appdir; do
-            link "$appdir" "$HOME/.config/$(basename "$appdir")"
-        done < <(find "$root/.config" -mindepth 1 -maxdepth 1 -type d)
+    # Whole-directory link. Works for any two-level layout, so both
+    # sway/.config/sway -> ~/.config/sway and
+    # wallpapers/Pictures/wallpapers -> ~/Pictures/wallpapers are handled.
+    if [[ "$DIR_LINK_PACKAGES" == *" $pkg "* ]]; then
+        local dir rel
+        while IFS= read -r dir; do
+            rel="${dir#"$root"/}"
+            link "$dir" "$HOME/$rel"
+        done < <(find "$root" -mindepth 2 -maxdepth 2 -type d)
         return 0
     fi
 

@@ -5,8 +5,13 @@ STATE_FILE="$HOME/.cache/sway-wallpaper-index"
 
 mkdir -p "$(dirname "$STATE_FILE")"
 
-# Get sorted list of images
-mapfile -t WALLPAPERS < <(find "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | sort)
+# Get sorted list of images.
+#
+# The -L matters: ~/Pictures/wallpapers is a symlink into the dotfiles repo,
+# and find does NOT follow symlinks by default. Without -L this search returns
+# zero images and the script reports "No images found" — whether the symlink is
+# the directory itself or the individual files inside it. -L covers both.
+mapfile -t WALLPAPERS < <(find -L "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | sort)
 
 COUNT=${#WALLPAPERS[@]}
 
