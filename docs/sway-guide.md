@@ -201,7 +201,7 @@ kill the old copy first — which is exactly what your `waybar-restart.sh` does.
 | `brightnessctl` | Screen brightness | none |
 | `playerctl` | Media keys | none |
 | `notify-send` | *Sends* a notification (from `libnotify`) | none |
-| `mako` | *Displays* them — the daemon `notify-send` talks to | `~/.config/mako/config` (none yet; defaults apply) |
+| `mako` | *Displays* them — the daemon `notify-send` talks to | `~/.config/mako/config` |
 
 Note the split of responsibility between the two idle-related programs, because
 this is where most confusion lives:
@@ -731,24 +731,12 @@ exec_always sh -c 'pkill -x mako; mako'
 one. `sh -c` so the `;` is a shell separator, not something sway's parser acts
 on.
 
-Mako has **no config file yet** — `~/.config/mako/config` does not exist, so the
-built-in defaults apply. To restyle it to match waybar's Catppuccin palette:
+Styled to match waybar and rofi in `~/.config/mako/config`, tracked as the
+`mako` package. Apply changes with `makoctl reload` — no sway reload needed.
 
-```
-# ~/.config/mako/config
-background-color=#1e1e2e
-text-color=#cdd6f4
-border-color=#89b4fa
-border-size=1
-font=FiraCode Nerd Font 10
-default-timeout=5000
-```
-
-Apply with `makoctl reload`. Useful commands: `makoctl list` shows what is
-currently displayed, `makoctl dismiss -a` clears everything.
-
-If you add that file, remember it is a **new config location** — add a `mako`
-package to the dotfiles repo so it is tracked.
+Full walkthrough in **[mako-guide.md](mako-guide.md)**, including the one trap
+worth knowing: `default-timeout=0` inside a criteria section is silently
+overridden by the sender unless you also set `ignore-timeout=1`.
 
 ### `waybar-restart.sh` — bound to `exec_always`
 
@@ -916,6 +904,8 @@ workspace is already empty — both are explained in §6.2.
 | `Alt+Shift+e` | Exit sway (asks for confirmation) |
 | `Alt+Shift+x` | Lock screen now |
 | `Alt+Shift+w` | Next wallpaper |
+| `Alt+n` | Toggle do-not-disturb (mako) |
+| `Alt+Shift+n` | Dismiss all notifications |
 | `Alt+Pause` | Passthrough mode — suspends all sway bindings *(system)* |
 
 ### Media and hardware *(all system)*

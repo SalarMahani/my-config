@@ -37,6 +37,7 @@ shell/.zshrc               ->   ~/.zshrc
 | `waybar` | Bar modules (`config.jsonc`) and styling (`style.css`) |
 | `kitty` | Terminal config and current theme |
 | `rofi` | Launcher theme |
+| `mako` | Notification daemon styling |
 | `shell` | `.zshrc`, `.zshenv`, `.bashrc`, `.profile`, `.p10k.zsh` |
 | `vim` | `.vimrc` |
 | `git` | `.gitconfig` |
@@ -47,7 +48,7 @@ This is deliberately **GNU stow's package format**. Nothing here needs stow —
 `install.sh` has no dependencies — but if you ever `dnf install stow`, then
 `stow sway` from this directory does the same job with no restructuring.
 
-`sway`, `waybar`, `kitty`, `rofi` and `wallpapers` are linked as whole
+`sway`, `waybar`, `kitty`, `rofi`, `mako` and `wallpapers` are linked as whole
 **directories**, so a new script dropped into `sway/.config/sway/scripts/` is
 picked up with no re-run. The `$HOME` dotfiles are linked per **file**, so
 nothing else in your home directory gets swept in.
@@ -154,8 +155,10 @@ It is started from the sway config's §6:
 exec_always sh -c 'pkill -x mako; mako'
 ```
 
-Verify after login: `notify-send test test` should return in milliseconds and
-put a popup on screen.
+Styled to match waybar and rofi in the `mako` package; see
+[docs/mako-guide.md](docs/mako-guide.md). Verify after login:
+`notify-send test test` should return in milliseconds and put a popup on
+screen.
 
 What each is for, so you can drop what you do not want:
 

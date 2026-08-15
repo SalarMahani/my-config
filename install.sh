@@ -33,7 +33,7 @@ STAMP="$(date +%F)"
 #      `find -maxdepth 1 -type f`, and a symlink is -type l, not -type f — so
 #      per-file linking would make it find zero wallpapers and silently stop
 #      working. Linking the directory keeps the files inside it real.
-DIR_LINK_PACKAGES=" sway waybar kitty rofi wallpapers "
+DIR_LINK_PACKAGES=" sway waybar kitty rofi mako wallpapers "
 
 info()  { printf '  %s\n' "$*"; }
 act()   { if $DRY_RUN; then printf '  [dry-run] %s\n' "$*"; else printf '  %s\n' "$*"; fi; }

@@ -1,0 +1,140 @@
+# mako — notification daemon
+#
+# Documented in ~/dotfiles/docs/mako-guide.md.
+# Started from the sway config §6: exec_always sh -c 'pkill -x mako; mako'
+#
+# Format is `key=value`, one per line. Sections in [square brackets] are
+# "criteria": their style options apply only to notifications that match.
+# Later matching criteria win, so order matters — keep the general ones first.
+#
+# Apply changes with `makoctl reload` (no need to restart sway).
+
+
+### Palette — Catppuccin Mocha, matching waybar, rofi and swaylock ##########
+#
+#   base      #1e1e2e   background          blue    #89b4fa   accent
+#   surface   #313244   grouped/low bg      yellow  #f9e2af   warning
+#   text      #cdd6f4   body text           red     #f38ba8   critical
+#   overlay   #6c7086   dimmed text
+#
+# Colours are #RRGGBB or #RRGGBBAA. The AA suffix is alpha — rofi uses
+# #1e1e2eee for a slightly translucent popup, and the same is used here so the
+# two look like the same system.
+
+
+### Appearance #############################################################
+
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#89b4fa
+progress-color=over #313244
+
+# Square corners and a 1px border, matching sway's `default_border pixel 1`,
+# waybar's `border-radius: 0` and rofi's 1px accent outline. The whole desktop
+# is deliberately square-edged.
+border-size=1
+border-radius=0
+
+# The non-Mono variant, same as waybar and rofi. Mono is only for kitty, which
+# needs every glyph to occupy exactly one terminal cell.
+font=FiraCode Nerd Font 10
+
+padding=10
+margin=6
+width=340
+height=120
+
+
+### Placement ##############################################################
+
+# Below the waybar, which is 28px tall at the top of the screen. outer-margin
+# pushes the whole stack down so notifications never overlap the bar.
+anchor=top-right
+outer-margin=34,10,10,10
+
+# Draw above normal windows but below fullscreen ones.
+layer=top
+
+# `output` is deliberately unset: with two monitors, notifications follow the
+# focused output rather than being pinned to one screen. Set it to eDP-1 or
+# HDMI-A-1 to pin them.
+
+max-visible=5
+default-timeout=5000
+ignore-timeout=0
+
+# Group notifications from the same app, showing a count instead of stacking
+# ten identical popups.
+group-by=app-name
+
+
+### Urgency levels #########################################################
+
+[urgency=low]
+background-color=#1e1e2ecc
+text-color=#b4b8c5
+border-color=#313244
+default-timeout=3000
+
+[urgency=normal]
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#89b4fa
+
+# Critical notifications never expire on their own — they stay until dismissed
+# with `makoctl dismiss -a` or a click. A red border makes them unmissable.
+#
+# `ignore-timeout=1` is required here, not optional. The global setting is 0,
+# meaning mako honours whatever expiry the sender asked for — and notify-send
+# sends a positive default rather than "let the server decide", so a critical
+# notification would vanish after a few seconds and default-timeout=0 would be
+# silently overridden. Verified: without this line the popup disappears; with
+# it, it stays.
+[urgency=critical]
+background-color=#1e1e2eee
+text-color=#f38ba8
+border-color=#f38ba8
+border-size=2
+ignore-timeout=1
+default-timeout=0
+
+
+### Specific notifications #################################################
+
+# Brightness and volume, sent by Fedora's bindings in
+# /usr/share/sway/config.d/60-bindings-{brightness,volume}.conf.
+#
+# Those bindings pass `-h int:value:N`, which mako renders as a progress bar
+# using progress-color above. They also pass
+# `-h string:x-canonical-private-synchronous:<tag>`, which makes each new one
+# REPLACE the previous rather than stacking — verified: three rapid brightness
+# presses leave exactly one popup showing the latest value.
+#
+# Short timeout because these are glanceable feedback, not messages.
+[summary~="(Brightness|Volume|Muted).*"]
+default-timeout=1200
+border-color=#89b4fa
+group-by=summary
+
+# The wallpaper cycler, bound to $mod+Shift+w.
+[app-name="notify-send" summary="Wallpaper changed"]
+default-timeout=2000
+border-color=#f9e2af
+
+# Grouped notifications get the lighter surface colour so a stack reads as one
+# unit rather than several separate popups.
+[grouped]
+background-color=#313244ee
+border-color=#89b4fa
+
+### Do not disturb #########################################################
+
+# Toggled with $mod+n (sway config §7.6), which runs `makoctl mode -t dnd`.
+#
+# `invisible=1` is a criteria-only option. The man page documents it for hiding
+# members of a group, but it works for this too: notifications are still
+# received and queued — `makoctl list` shows them — they are simply not drawn.
+# Nothing is lost while DND is on, so turning it off does not replay a backlog
+# at you; run `makoctl list` to read what arrived. Verified working.
+[mode=dnd]
+invisible=1

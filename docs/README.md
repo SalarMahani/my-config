@@ -12,6 +12,7 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [waybar-guide.md](waybar-guide.md) | The status bar — modules, format strings, CSS styling | The bar shows the wrong thing, or you want to add/restyle a module |
 | [kitty-guide.md](kitty-guide.md) | The terminal — fonts, themes, the theme-marker mechanism | Terminal colours, font size, ligatures, scrollback |
 | [rofi-guide.md](rofi-guide.md) | The launcher — modes, the rasi language, the widget tree | `$mod+space` behaves oddly, or you want to resize/restyle the popup |
+| [mako-guide.md](mako-guide.md) | Notifications — sender vs displayer, criteria, do-not-disturb | Notifications look wrong, do not appear, or stay too long |
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
 | [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, leader key, netrw | Editing settings, indentation, adding mappings |
 
@@ -38,6 +39,7 @@ you saved a file. How a change is applied differs per program:
 | waybar | `$mod+Shift+c` (sway restarts it via `exec_always`) |
 | kitty | `Ctrl+Shift+F5`, or a new window |
 | rofi | Nothing — read fresh on every launch |
+| mako | `makoctl reload` |
 | zsh | New terminal, or `exec zsh` |
 | vim | `:source ~/.vimrc`, or restart |
 

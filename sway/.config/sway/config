@@ -287,6 +287,12 @@ exec swayidle -w \
     # Next wallpaper
     bindsym $mod+Shift+w exec $scripts/wallpaper-next.sh
 
+    # Notifications: toggle do-not-disturb, and dismiss what is on screen.
+    # DND hides popups but still receives them — `makoctl list` shows what
+    # arrived while it was on. See docs/mako-guide.md.
+    bindsym $mod+n exec makoctl mode -t dnd
+    bindsym $mod+Shift+n exec makoctl dismiss -a
+
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 
