@@ -1,0 +1,25 @@
+# ~/.gitconfig — portable git settings
+#
+# This file is published on GitHub. Anything identifying or machine-specific
+# belongs in ~/.gitconfig.local instead, which is untracked and included at the
+# bottom of this file. That covers:
+#
+#   [user]  your name and email
+#   [safe]  directory entries, which name real paths on real servers
+#
+# Documented in ~/dotfiles/docs/shell-guide.md.
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = false
+
+[core]
+	editor = vim
+
+# Machine-specific and identifying settings. Git silently ignores a missing
+# include, so this line is safe on a fresh machine — but note that git will
+# refuse to commit until you create the file and set user.name / user.email.
+[include]
+	path = ~/.gitconfig.local

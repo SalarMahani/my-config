@@ -1,0 +1,252 @@
+# Default config for sway
+#
+# Copy this to ~/.config/sway/config and edit it to your liking.
+#
+# Read `man 5 sway` for a complete reference.
+
+### Variables
+#
+# Logo key. Use Mod1 for Alt.
+set $mod Mod1
+
+set $left h
+set $down j
+set $up k
+set $right l
+
+#remap caps lock to be esc
+input "type:keyboard" {
+    xkb_layout "us,ir"
+    xkb_options "caps:escape_shifted_capslock,grp:shifts_toggle"
+}
+
+input "type:touchpad" {
+    natural_scroll enable
+}
+
+# Your preferred terminal emulator
+set $term kitty
+
+# Your preferred application launcher
+set $rofi_cmd rofi \
+        -terminal '$term'
+set $menu $rofi_cmd -show combi -combi-modes drun#run -modes combi
+
+exec_always /home/albos/.config/sway/scripts/waybar-restart.sh
+
+### Output configuration
+# Laptop (eDP-1) on the LEFT, external monitor (HDMI-A-1, LG W2286) on the
+# RIGHT. Move the mouse right to reach the right monitor.
+#
+# NOTE: this used to say DP-1, which is not a real output on this machine, so
+# sway silently ignored both lines. The correct name comes from
+# `swaymsg -t get_outputs`. No resolution is forced: HDMI-A-1's native mode is
+# 1680x1050 and looks better than the 1024x768 that was configured here before.
+output eDP-1 position 0 0
+output HDMI-A-1 position 1366 0
+
+# Pin workspace numbers to outputs by parity: ODD = laptop (eDP-1), EVEN =
+# external (HDMI-A-1). The point is that a number tells you which screen it is
+# on before you press it, so $mod+3 always means "the laptop's second desktop"
+# no matter where you are looking right now.
+#
+# This also drives ws-cycle.py: when $mod+period appends a workspace it skips
+# numbers pinned to the OTHER output, so the laptop grows 1 -> 3 -> 5 -> 7 and
+# the external grows 2 -> 4 -> 6 on its own. Nothing in the script hardcodes
+# odd/even; it just reads these lines. Change the pins and the script follows.
+#
+# Only 1-10 are pinned, because only those have a $mod+<number> key. Past 10
+# the script infers the pattern from these lines (stride 2, odd here) and keeps
+# it going, so the laptop appends 11, 13 and the external appends 12, 14. Do
+# not rely on the numbers alone to do that: with nothing pinned above 10 the
+# plain "next free number" rule would hand the external 11 and break parity.
+#
+# Caveat: `workspace N output ...` does not affect workspaces that ALREADY
+# exist (see man 5 sway), so it only steers ones created from now on.
+workspace 1 output eDP-1
+workspace 3 output eDP-1
+workspace 5 output eDP-1
+workspace 7 output eDP-1
+workspace 9 output eDP-1
+
+workspace 2 output HDMI-A-1
+workspace 4 output HDMI-A-1
+workspace 6 output HDMI-A-1
+workspace 8 output HDMI-A-1
+workspace 10 output HDMI-A-1
+
+# Wallpaper: sway's native bg applies the image to every output.
+output * bg /home/albos/Pictures/wallpapers/02.png fill
+
+bindsym $mod+shift+w exec ~/.config/sway/scripts/wallpaper-next.sh
+
+# ── FIX: "black background on second monitor (HDMI-A-1)" ────────────────────
+# Symptom : after reboot the external monitor showed a solid black screen
+#           instead of the wallpaper.
+# Cause   : it was NOT the wallpaper/PNG. An invisible helper window,
+#           "xwaylandvideobridge" (X11 screen-share bridge, pulled in by
+#           PipeWire/KDE screen sharing), launched FULLSCREEN on HDMI-A-1 and
+#           covered the wallpaper with a transparent/black surface.
+# How we  : 1) `swaymsg output '*' bg '#3366ff' solid_color` -> still black,
+#  found it    so the image was innocent.
+#           2) `swaymsg -t get_tree` -> showed xwaylandvideobridge fullscreen
+#              on HDMI-A-1.
+# Fix     : force that window to be floating, invisible, never fullscreen, and
+#           parked in the scratchpad so it can never grab a monitor again.
+for_window [class="xwaylandvideobridge"] floating enable, opacity 0, fullscreen disable, move to scratchpad
+# ────────────────────────────────────────────────────────────────────────────
+
+#lock config:
+exec swayidle -w \
+    timeout 900 '/home/albos/.config/sway/scripts/lock.sh' \
+    timeout 905 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    before-sleep '/home/albos/.config/sway/scripts/lock.sh'
+
+bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
+
+### Key bindings
+#
+# Basics:
+#
+    # Start a terminal
+    bindsym $mod+Return exec $term
+
+    # Kill focused window
+    bindsym $mod+Shift+q kill
+    bindsym $mod+x kill
+
+    # Start your launcher
+    bindsym $mod+space exec rofi -show drun
+
+    # Drag floating windows by holding down $mod and left mouse button.
+    floating_modifier $mod normal
+
+    # Reload the configuration file
+    bindsym $mod+Shift+c reload
+
+    # Exit sway (logs you out of your Wayland session)
+    bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+#
+# Moving around:
+#
+    # Move your focus around
+    bindsym $mod+$left focus left
+    bindsym $mod+$down focus down
+    bindsym $mod+$up focus up
+    bindsym $mod+$right focus right
+    # Or use $mod+[up|down|left|right]
+    bindsym $mod+Left focus left
+    bindsym $mod+Down focus down
+    bindsym $mod+Up focus up
+    bindsym $mod+Right focus right
+
+    # Move the focused window with the same, but add Shift
+    bindsym $mod+Shift+$left move left
+    bindsym $mod+Shift+$down move down
+    bindsym $mod+Shift+$up move up
+    bindsym $mod+Shift+$right move right
+    # Ditto, with arrow keys
+    bindsym $mod+Shift+Left move left
+    bindsym $mod+Shift+Down move down
+    bindsym $mod+Shift+Up move up
+    bindsym $mod+Shift+Right move right
+#
+# Workspaces:
+#
+    # Switch to workspace
+    bindsym $mod+1 workspace number 1
+    bindsym $mod+2 workspace number 2
+    bindsym $mod+3 workspace number 3
+    bindsym $mod+4 workspace number 4
+    bindsym $mod+5 workspace number 5
+    bindsym $mod+6 workspace number 6
+    bindsym $mod+7 workspace number 7
+    bindsym $mod+8 workspace number 8
+    bindsym $mod+9 workspace number 9
+    bindsym $mod+0 workspace number 10
+    # Move focused container to workspace
+    bindsym $mod+Shift+1 move container to workspace number 1
+    bindsym $mod+Shift+2 move container to workspace number 2
+    bindsym $mod+Shift+3 move container to workspace number 3
+    bindsym $mod+Shift+4 move container to workspace number 4
+    bindsym $mod+Shift+5 move container to workspace number 5
+    bindsym $mod+Shift+6 move container to workspace number 6
+    bindsym $mod+Shift+7 move container to workspace number 7
+    bindsym $mod+Shift+8 move container to workspace number 8
+    bindsym $mod+Shift+9 move container to workspace number 9
+    bindsym $mod+Shift+0 move container to workspace number 10
+
+    # ── Walk the workspaces that exist ON THE CURRENT MONITOR ───────────────
+    # $mod+1..0 above jumps to one fixed workspace wherever it lives. These
+    # instead treat the current monitor's workspaces as a strip you walk left
+    # and right, so you can flip between them without remembering numbers.
+    #
+    #   $mod+period  -> one step right. At the last workspace there is nowhere
+    #                   left to go, so it APPENDS a new empty workspace and
+    #                   focuses it. Walking off the end is how you get a new
+    #                   desktop; there is no separate "create" key.
+    #   $mod+comma   -> one step left. Stops at the first one. Never creates.
+    #
+    # Neither wraps around, because at the last workspace $mod+period has to
+    # mean either "wrap to the first" or "append a new one" and it cannot be
+    # both. Sway's built-in `workspace next_on_output`/`prev_on_output` do the
+    # walking but always wrap and never append, hence the script.
+    bindsym $mod+period exec ~/.config/sway/scripts/ws-cycle.py next
+    bindsym $mod+comma  exec ~/.config/sway/scripts/ws-cycle.py prev
+
+    # Same idea, but drag the focused window along with you. Uses the same
+    # script so these stay consistent with the two above; the built-in
+    # `move container to workspace next_on_output` would wrap instead of append.
+    bindsym $mod+Shift+period exec ~/.config/sway/scripts/ws-cycle.py next --take
+    bindsym $mod+Shift+comma  exec ~/.config/sway/scripts/ws-cycle.py prev --take
+    # ────────────────────────────────────────────────────────────────────────
+#
+# Layout stuff:
+#
+    bindsym $mod+b splith
+    bindsym $mod+shift+v splitv
+
+    # Switch the current container between different layout styles
+    bindsym $mod+s layout stacking
+    bindsym $mod+w layout tabbed
+    bindsym $mod+e layout toggle split
+
+    # Make the current focus fullscreen
+    bindsym $mod+f fullscreen
+
+    # Toggle the current focus between tiling and floating mode
+    bindsym $mod+Shift+space floating toggle
+
+    # Move focus to the parent container
+    bindsym $mod+a focus parent
+#
+# Scratchpad:
+#
+    # Move the currently focused window to the scratchpad
+    bindsym $mod+Shift+minus move scratchpad
+
+    # Show the next scratchpad window or hide the focused scratchpad window.
+    bindsym $mod+minus scratchpad show
+
+# border config:
+default_border pixel 1
+
+#
+# Resizing containers:
+#
+mode "resize" {
+    bindsym $left resize shrink width 10px
+    bindsym $down resize grow height 10px
+    bindsym $up resize shrink height 10px
+    bindsym $right resize grow width 10px
+
+    bindsym Right resize grow width 10px
+
+    # Return to default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# Include configs from 3 locations:
+include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'

@@ -1,0 +1,85 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus";
+    font: "FiraCode Nerd Font 10";
+    drun-display-format: "{name}";
+
+    kb-row-down: "Down,Control+n";
+    kb-row-up: "Up,Control+p";
+}
+
+@theme "/dev/null"
+
+* {
+    bg: #1e1e2eee;
+    bg-alt: #313244;
+    fg: #b4b8c5;
+    accent: #89b4fa;
+}
+
+window {
+    background-color: @bg;
+    border: 0px;
+    border-radius: 0px;
+    width: 400px;
+    padding: 12px;
+}
+
+mainbox {
+    background-color: @bg;
+    children: [inputbar, listview];
+    spacing: 10px;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    border-radius: 0px;
+    padding: 6px 10px;
+    children: [entry];
+}
+
+entry {
+    background-color: transparent;
+    text-color: @fg;
+    placeholder: "Search...";
+    placeholder-color: #6c7086;
+}
+
+listview {
+    background-color: @bg;
+    lines: 6;
+    scrollbar: false;
+    spacing: 3px;
+}
+
+element {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 5px;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: @fg;
+    vertical-align: 0.5;
+}
+
+element-icon {
+    background-color: transparent;
+    vertical-align: 0.5;
+    margin:0px 8px 0px 0px;
+}
+
+element selected {
+    background-color: transparent;
+    border: 1px;
+    border-color: @accent;
+    border-radius: 0px;
+}
+
+element selected element-text {
+    text-color: @accent;
+    font: "FiraCode Nerd Font Bold 10";
+}

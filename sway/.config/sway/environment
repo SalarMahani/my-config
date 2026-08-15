@@ -1,0 +1,6 @@
+# Sway user environment (sourced by /usr/bin/start-sway at login).
+#
+# NOTE: WLR_DRM_NO_ATOMIC=1 was removed. It forces legacy DRM modesetting,
+# which left the second monitor (HDMI-A-1) black. Fedora only needs that flag
+# inside a KVM VM; on this bare-metal Intel (i915) laptop, atomic modesetting
+# is the correct default and drives both outputs.

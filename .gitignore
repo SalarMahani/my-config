@@ -1,0 +1,14 @@
+# Backups install.sh makes when it displaces a real file
+*.bak
+*.bak-*
+*~
+
+# Machine-specific or secret shell settings. Sourced by .zshrc if present, but
+# never tracked -- put API keys, tokens and per-machine PATH tweaks here.
+.zshrc.local
+.bashrc.local
+
+# Editor and OS noise
+.swp
+.swo
+.DS_Store
