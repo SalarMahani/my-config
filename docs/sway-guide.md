@@ -218,8 +218,9 @@ flags in `lock.sh`.
 
 ### 4.1 The files
 
-**The short answer: everything you own lives under `~/.config/sway/`.** That one
-directory is what you back up, and what you copy to a new machine.
+**The short answer: everything you own lives under `~/.config/sway/`** — which,
+since 2026-08-15, is a symlink into `~/dotfiles`. That repo is what you back up
+and what you copy to a new machine.
 
 ```
 ~/.config/sway/
@@ -231,10 +232,11 @@ directory is what you back up, and what you copy to a new machine.
     ├── lock.sh             ← your swaylock appearance
     ├── wallpaper-next.sh   ← cycles wallpapers
     ├── waybar-restart.sh   ← restarts the bar
-    ├── ws-cycle.py         ← workspace navigation, see §6
-    ├── set-outputs.sh      ← unused leftover
-    └── fix-second-monitor.sh ← unused leftover
+    └── ws-cycle.py         ← workspace navigation, see §6
 ```
+
+⚠️ **This directory is now a symlink** into your dotfiles repo — see §4.2. The
+paths below are all still correct; they just resolve through the link.
 
 ### 4.2 Every path that affects your sway session
 
@@ -244,6 +246,7 @@ picture, in load-priority order:
 
 | Path | Owner | What it holds |
 |---|---|---|
+| `~/dotfiles/` | **you** | **The git repo. Real files live here; everything below is a symlink into it.** |
 | `~/.config/sway/config` | **you** | Main config: bindings, outputs, workspace pins, rules |
 | `~/.config/sway/config.d/*.conf` | **you** | Your overrides; shadow system files by filename |
 | `~/.config/sway/scripts/` | **you** | Helper scripts your bindings call |
@@ -375,9 +378,30 @@ whether one of those system files rebinds it.
 
 ## 5. Your Config, Section by Section
 
-File: `~/.config/sway/config`
+File: `~/.config/sway/config` (a symlink to `~/dotfiles/sway/.config/sway/config`)
 
-### 5.1 Variables (lines 10–33)
+Since 2026-08-15 the file is organised into nine numbered sections, and the
+subsections below map onto them. Two orderings actually matter to sway and must
+be preserved if you rearrange anything:
+
+- **Variables must be `set` before they are used**, so §1 comes first.
+- **The `include` must stay on the last line.** `config.d/` loads *after* this
+  file and overrides it, so moving the include earlier would silently change
+  which settings win.
+
+| Config section | Contents |
+|---|---|
+| §1 Variables | `$mod`, `$left/$down/$up/$right`, `$term`, `$scripts` |
+| §2 Input devices | Keyboard (us/ir, caps→esc), touchpad |
+| §3 Outputs and workspaces | Monitor positions, odd/even workspace pins |
+| §4 Appearance | Wallpaper, `default_border`, `floating_modifier` |
+| §5 Window rules | The `xwaylandvideobridge` fix |
+| §6 Startup programs | `exec_always` waybar, `exec` swayidle |
+| §7 Key bindings | Basics, focus, workspaces, layout, scratchpad, session |
+| §8 Modes | `resize` |
+| §9 Include | Fedora's layered include — **must stay last** |
+
+### 5.1 Variables (config §1)
 
 ```
 set $mod Mod1
@@ -409,7 +433,7 @@ Note: `$menu` is defined but **never used** — your launcher binding on line 88
 calls `rofi -show drun` directly. Harmless, but if you ever want the combined
 drun+run launcher, bind `$menu` instead.
 
-### 5.2 Input devices (lines 18–25)
+### 5.2 Input devices (config §2)
 
 ```
 input "type:keyboard" {
@@ -434,7 +458,7 @@ The `type:` prefix matches whole classes of device, which is why this survives
 plugging in an external keyboard. To target one specific device, use its
 identifier from `swaymsg -t get_inputs`.
 
-### 5.3 Outputs (lines 45–79)
+### 5.3 Outputs and workspaces (config §3)
 
 ```
 output eDP-1 position 0 0
@@ -467,13 +491,13 @@ ignored; corrected 2026-08-15. See
 are `stretch`, `fill`, `fit`, `center`, `tile`. `fill` covers the whole screen
 and crops the overflow.
 
-### 5.4 Window rules (line 96)
+### 5.4 Window rules (config §5)
 
 ```
 for_window [class="xwaylandvideobridge"] floating enable, opacity 0, fullscreen disable, move to scratchpad
 ```
 
-Your config carries an excellent comment block explaining this (lines 83–96), so
+Your config carries an excellent comment block explaining this, so
 briefly: `xwaylandvideobridge` (an X11 screen-sharing helper pulled in by
 PipeWire) was launching fullscreen on the external monitor and covering the
 wallpaper with a transparent surface, which read as a black screen. This rule
@@ -486,7 +510,7 @@ real culprit. Keep that comment.
 `for_window` criteria you will use most: `app_id` for native Wayland apps,
 `class` for X11/XWayland apps, `title` for matching window titles.
 
-### 5.5 Appearance (line 232)
+### 5.5 Appearance (config §4)
 
 ```
 default_border pixel 1
@@ -495,7 +519,7 @@ default_border pixel 1
 A 1-pixel border with no title bar. Other options: `normal` (title bar),
 `none`, `pixel <n>`.
 
-### 5.6 Resize mode (lines 237–249)
+### 5.6 Resize mode (config §8)
 
 ```
 mode "resize" { ... }
@@ -710,12 +734,18 @@ the end. The only script here that is not a thin shell wrapper, and the only one
 with its own tunables. Fully documented in
 [§6.4](#64-ws-cyclepy) — read that before editing it.
 
-### `set-outputs.sh` and `fix-second-monitor.sh` — currently unused
+### `set-outputs.sh` and `fix-second-monitor.sh` — deleted 2026-08-15
 
-Neither is referenced anywhere in your config; they are leftovers from
-debugging the second-monitor problem. `set-outputs.sh` used `HDMI-A-1` all
-along, which is what flagged the `DP-1` mistake in the main config (now fixed).
-Both are safe to delete, or keep as manual repair tools.
+Leftovers from debugging the second-monitor problem, referenced by nothing.
+`set-outputs.sh` used `HDMI-A-1` all along, which is what flagged the `DP-1`
+mistake in the main config — but it also hardcoded the output positions, making
+it a second source of truth that could silently contradict the config.
+
+Both were removed *after* the first git commit, so they remain recoverable:
+
+```bash
+git -C ~/dotfiles show 40291a3:sway/.config/sway/scripts/set-outputs.sh
+```
 
 ---
 
@@ -908,7 +938,8 @@ nothing**. The consequences were:
   breakage.
 
 The `DP-1` name was a leftover from an earlier VGA-adapter setup. The comment
-block on lines 83–96 and `set-outputs.sh` both used `HDMI-A-1` correctly.
+block above it, and the since-deleted `set-outputs.sh`, both used `HDMI-A-1`
+correctly.
 
 **Now fixed to:**
 
@@ -945,25 +976,40 @@ output 'LG Electronics W2286 0x00101010' position 1366 0
 
 ### ⚠️ Issue 2: laptop position assumes a width that no longer matches
 
-Line 40 places `eDP-1` at `0,0` and the external at x=1366, which correctly
+Config §3 places `eDP-1` at `0,0` and the external at x=1366, which correctly
 abuts them since the laptop is 1366 wide. But the external is 1050 tall versus
 the laptop's 768, so their vertical alignment is top-edge-flush. If mouse
 movement between screens ever feels wrong, adjust the external's y-position —
 e.g. `position 1366 -140` to centre them vertically.
 
-### ℹ️ Issue 3: `$menu` defined but unused
+### ✅ Issue 3: `$menu` defined but unused — FIXED 2026-08-15
 
-Line 33 defines a nice combined launcher; line 88 uses plain `rofi -show drun`.
-Change line 88 to `bindsym $mod+space exec $menu` if you want the combined mode.
+`$rofi_cmd` and `$menu` were defined but never referenced; `$mod+space` called
+`rofi -show drun` directly. Both variables were deleted rather than wired up,
+so **`$mod+space` behaves exactly as before**.
 
-### ℹ️ Issue 4: unused scripts
+The deleted `$menu` used rofi's `combi` mode, showing `drun` and `run` results
+together. If you want that, restore it as a one-liner:
 
-`set-outputs.sh` and `fix-second-monitor.sh` are not referenced by anything.
+```
+bindsym $mod+space exec rofi -show combi -combi-modes drun#run -modes combi
+```
 
-### ℹ️ Issue 5: resize mode arrow keys are incomplete
+### ✅ Issue 4: unused scripts — FIXED 2026-08-15
 
-Only `Right` is bound among arrows inside resize mode. Add the other three for
-symmetry if you use arrows there.
+`set-outputs.sh` and `fix-second-monitor.sh` deleted; see §7. Recoverable from
+git history.
+
+### ✅ Issue 5: resize mode arrow keys are incomplete — FIXED 2026-08-15
+
+`Left`, `Up` and `Down` are now bound inside resize mode alongside the existing
+`Right`, matching the `h/j/k/l` bindings.
+
+### ℹ️ Issue 6: absolute paths remain in two places
+
+`$scripts` now covers the helper scripts, but the wallpaper in config §4 and the
+lock image in `lock.sh` are still absolute `/home/albos/...` paths. Harmless on
+this machine; they would need editing on a differently-named account.
 
 ---
 
@@ -1098,7 +1144,11 @@ rpm -q xdg-desktop-portal-wlr
 ## Quick Reference Card
 
 ```
-CONFIG      ~/.config/sway/config        ← everything you own is under ~/.config/sway/
+REPO        ~/dotfiles                   ← real files; everything below symlinks here
+            git -C ~/dotfiles diff       ← review BEFORE you reload
+            git -C ~/dotfiles checkout . ← undo uncommitted damage
+            ~/dotfiles/install.sh -n     ← re-link after adding a package (-n = dry run)
+CONFIG      ~/.config/sway/config        ← symlink into the repo
 SYSTEM      /usr/share/sway/config.d/    ← package defaults (media keys, screenshots)
             /etc/sway/config.d/          ← machine-wide overrides
 RELOAD      Alt+Shift+c              (does NOT restart `exec` programs)
