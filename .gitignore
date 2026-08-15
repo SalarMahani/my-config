@@ -7,6 +7,7 @@
 # never tracked -- put API keys, tokens and per-machine PATH tweaks here.
 .zshrc.local
 .bashrc.local
+.gitconfig.local
 
 # Editor and OS noise
 .swp
