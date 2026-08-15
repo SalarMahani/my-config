@@ -141,20 +141,21 @@ sudo dnf install -y \
   papirus-icon-theme mako
 ```
 
-⚠️ **`mako` is not currently installed on the original machine, and should be.**
-`libnotify` provides `notify-send`, which *sends* notifications — but nothing on
-this system *displays* them. Worse, D-Bus still advertises
-`org.freedesktop.Notifications` as activatable (a leftover KDE registration), so
-`notify-send` blocks for **85 seconds** trying to start a daemon that does not
-exist. `wallpaper-next.sh` now detaches and time-limits its notification so this
-cannot hang a keybinding, but installing `mako` is the real fix and makes
-notifications actually appear:
+**Do not drop `mako`.** `libnotify` provides `notify-send`, which only *sends*
+notifications; sway ships nothing that *displays* them. Without a daemon, D-Bus
+still advertises `org.freedesktop.Notifications` as activatable, so `notify-send`
+does not fail fast — it waits out the activation timeout, measured at **85
+seconds**. Fedora's brightness and volume bindings each fire a notification, so
+every key press would leave a process stuck for that long.
 
-```bash
-sudo dnf install mako
+It is started from the sway config's §6:
+
+```
+exec_always sh -c 'pkill -x mako; mako'
 ```
 
-Then add it to the sway config's startup section (§6): `exec_always mako`.
+Verify after login: `notify-send test test` should return in milliseconds and
+put a popup on screen.
 
 What each is for, so you can drop what you do not want:
 
@@ -173,7 +174,7 @@ What each is for, so you can drop what you do not want:
 | `git` | Cloning this repo, and zinit self-installs with it |
 | `vim-enhanced` | The editor. **Not** `vim` — on Fedora that is a metapackage; `vim-enhanced` is what provides `/usr/bin/vim` |
 | `libnotify` | `notify-send`, used by `wallpaper-next.sh` — sends notifications |
-| `mako` | **Displays** them. Without it notify-send blocks ~85s and nothing appears |
+| `mako` | **Displays** them. Without it notify-send blocks ~85s and nothing appears. Started by sway §6 |
 | `grimshot` | Screenshots (`Print`, bound by Fedora's sway config.d) |
 | `brightnessctl` `pulseaudio-utils` | Brightness and volume keys |
 | `wl-clipboard` | `wl-copy` / `wl-paste` |

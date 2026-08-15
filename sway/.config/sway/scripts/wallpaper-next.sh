@@ -40,12 +40,15 @@ swaymsg output "*" bg "$NEXT_WALLPAPER" fill
 
 # Notifications are best-effort, detached, and time-limited.
 #
-# No notification daemon (mako/dunst/swaync) is installed here, yet D-Bus still
-# advertises org.freedesktop.Notifications as activatable because of a leftover
-# KDE service. So notify-send blocks trying to start something that will never
-# start: measured at 85 SECONDS before it gives up. Run bare, that made
-# $mod+Shift+w appear to hang and turned a successful change into exit 1.
+# mako now serves org.freedesktop.Notifications, so this returns in ~10ms and
+# the guard is not currently doing anything. It stays because the failure mode
+# it prevents is nasty and easy to fall back into: with no daemon running,
+# D-Bus still advertises that name as activatable (a leftover KDE registration),
+# so notify-send does not fail fast — it waits out the activation timeout,
+# measured at 85 SECONDS. Run bare, that made $mod+Shift+w appear to hang and
+# turned a successful wallpaper change into exit 1.
 #
-# The wallpaper is already applied above, so the notification is pure garnish:
-# detach it, cap it at 3s, and never let it affect our exit status.
+# The wallpaper is already applied above, so the notification is pure garnish.
+# Detached and capped, it can never delay the keybinding or change our exit
+# status, whether or not a daemon is running.
 ( timeout 3 notify-send "Wallpaper changed" "$(basename "$NEXT_WALLPAPER")" >/dev/null 2>&1 & )

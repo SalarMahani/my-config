@@ -200,7 +200,8 @@ kill the old copy first — which is exactly what your `waybar-restart.sh` does.
 | `grimshot` | Screenshots | none (called with arguments) |
 | `brightnessctl` | Screen brightness | none |
 | `playerctl` | Media keys | none |
-| `notify-send` | Desktop notifications | via a notification daemon |
+| `notify-send` | *Sends* a notification (from `libnotify`) | none |
+| `mako` | *Displays* them — the daemon `notify-send` talks to | `~/.config/mako/config` (none yet; defaults apply) |
 
 Note the split of responsibility between the two idle-related programs, because
 this is where most confusion lives:
@@ -396,7 +397,7 @@ be preserved if you rearrange anything:
 | §3 Outputs and workspaces | Monitor positions, odd/even workspace pins |
 | §4 Appearance | Wallpaper, `default_border`, `floating_modifier` |
 | §5 Window rules | The `xwaylandvideobridge` fix |
-| §6 Startup programs | `exec_always` waybar, `exec` swayidle |
+| §6 Startup programs | `exec_always` waybar and mako, `exec` swayidle |
 | §7 Key bindings | Basics, focus, workspaces, layout, scratchpad, session |
 | §8 Modes | `resize` |
 | §9 Include | Fedora's layered include — **must stay last** |
@@ -717,6 +718,38 @@ kills any running `swaybg` to avoid a race, applies the new image via
 you would rather keep lock images out of the rotation, move it to a subfolder
 (the script uses `-maxdepth 1`) and update the path in `lock.sh`.
 
+### `mako` — the notification daemon, started by `exec_always`
+
+Not a script of yours, but it lives on the same `exec_always` line style and is
+easy to forget:
+
+```
+exec_always sh -c 'pkill -x mako; mako'
+```
+
+`pkill` first, so a reload replaces the daemon rather than stacking a second
+one. `sh -c` so the `;` is a shell separator, not something sway's parser acts
+on.
+
+Mako has **no config file yet** — `~/.config/mako/config` does not exist, so the
+built-in defaults apply. To restyle it to match waybar's Catppuccin palette:
+
+```
+# ~/.config/mako/config
+background-color=#1e1e2e
+text-color=#cdd6f4
+border-color=#89b4fa
+border-size=1
+font=FiraCode Nerd Font 10
+default-timeout=5000
+```
+
+Apply with `makoctl reload`. Useful commands: `makoctl list` shows what is
+currently displayed, `makoctl dismiss -a` clears everything.
+
+If you add that file, remember it is a **new config location** — add a `mako`
+package to the dotfiles repo so it is tracked.
+
 ### `waybar-restart.sh` — bound to `exec_always`
 
 ```bash
@@ -1008,28 +1041,33 @@ git history.
 `Left`, `Up` and `Down` are now bound inside resize mode alongside the existing
 `Right`, matching the `h/j/k/l` bindings.
 
-### ⚠️ Issue 6: no notification daemon is installed
+### ✅ Issue 6: no notification daemon — FIXED 2026-08-15
 
-`libnotify` gives you `notify-send`, which *sends* notifications — but nothing on
-this machine *displays* them. No `mako`, `dunst` or `swaync` is installed.
+`libnotify` gives you `notify-send`, which *sends* notifications, but sway ships
+nothing that *displays* them, and no daemon was installed.
 
-It is worse than notifications simply not appearing. D-Bus still advertises
-`org.freedesktop.Notifications` as activatable, left over from KDE, so
-`notify-send` blocks trying to start a daemon that will never start. Measured:
-**85 seconds** before it gives up.
+It was worse than notifications simply not appearing. D-Bus still advertises
+`org.freedesktop.Notifications` as **activatable** — a leftover KDE registration
+— so `notify-send` did not fail fast. It waited out the full activation timeout
+trying to start a daemon that did not exist: **85 seconds**, measured.
 
-`wallpaper-next.sh` used to call it bare as its last command, so `$mod+Shift+w`
-appeared to hang for 85s and returned exit 1 even though the wallpaper had
-already changed. The script now detaches the call and caps it at 3s (85000ms →
-61ms), but that is damage control. The real fix:
+Two things were affected. `wallpaper-next.sh` called it bare as its last
+command, so `$mod+Shift+w` appeared to hang and returned exit 1 even though the
+wallpaper had already changed. And Fedora's brightness and volume bindings in
+`/usr/share/sway/config.d/` each fire a notification, so every one of those key
+presses left a process stuck for 85 seconds.
 
-```bash
-sudo dnf install mako
-```
+Fixed on both sides:
 
-then add `exec_always mako` to the config's startup section (§6). Fedora's own
-brightness and volume bindings in `/usr/share/sway/config.d/` also send
-notifications, so they are silently degraded too.
+- **`mako` installed** and started from config §6 with
+  `exec_always sh -c 'pkill -x mako; mako'`. The `pkill` prevents reloads from
+  stacking up daemons; `sh -c` keeps the `;` unambiguous.
+- **`wallpaper-next.sh` detaches and caps its notification at 3s** regardless.
+  Redundant now, kept because the failure mode is easy to fall back into.
+
+Measured after: `notify-send` returns in **40ms** instead of 85,000ms, the
+wallpaper script runs in 61ms and exits 0, and brightness notifications render
+their level bar in 11ms.
 
 ### ℹ️ Issue 7: absolute paths remain in two places
 

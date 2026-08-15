@@ -131,6 +131,21 @@ for_window [class="xwaylandvideobridge"] floating enable, opacity 0, fullscreen 
 # up duplicate bars.
 exec_always $scripts/waybar-restart.sh
 
+# Notification daemon. Sway ships no notification support at all, so without
+# this nothing DISPLAYS notifications — `notify-send` only sends them.
+#
+# It is not merely cosmetic here. D-Bus still advertises
+# org.freedesktop.Notifications as activatable, left over from KDE, so with no
+# daemon running notify-send does not fail fast: it waits out the full
+# activation timeout, measured at 85 seconds. Fedora's brightness and volume
+# bindings in /usr/share/sway/config.d/ each fire a notification, so every key
+# press was leaving a process stuck for that long.
+#
+# `pkill -x mako` first, so reloading does not stack up duplicates the way an
+# unguarded exec_always would. Wrapped in `sh -c` so the `;` is unambiguously a
+# shell separator rather than something sway's own parser might act on.
+exec_always sh -c 'pkill -x mako; mako'
+
 # Idle chain: lock at 15:00, blank the screens at 15:05, lock before sleep.
 #
 # The $scripts paths here are deliberately UNQUOTED while the swaymsg commands
