@@ -17,10 +17,15 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
 | [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, `.ideavimrc` for JetBrains, leader key, netrw | Editing settings, indentation, adding mappings, or working out which of your three vim configs to change |
 
+| [symlinks-guide.md](symlinks-guide.md) | How the repo works — `ln -s`, the traps, adding a config yourself | You want to track a new config, or something broke after moving files |
+
 ## Start here
 
 **Nothing works / the desktop looks broken** → [sway-guide.md](sway-guide.md),
 troubleshooting cookbook at the end.
+
+**"How does this repo actually work?"** → [symlinks-guide.md](symlinks-guide.md),
+which explains the one mechanism everything rests on.
 
 **Setting this up on a new machine** → the repo [README](../README.md), which has
 the dependency list and bootstrap order.
