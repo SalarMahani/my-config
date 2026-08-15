@@ -40,7 +40,7 @@ shell/.zshrc               ->   ~/.zshrc
 | `mako` | Notification daemon styling |
 | `vscode` | VS Code `settings.json`, `keybindings.json`, extension list |
 | `shell` | `.zshrc`, `.zshenv`, `.bashrc`, `.profile`, `.p10k.zsh` |
-| `vim` | `.vimrc` |
+| `vim` | `.vimrc` (terminal vim) and `.ideavimrc` (JetBrains IdeaVim) |
 | `git` | `.gitconfig` |
 | `wallpapers` | 12 images → `~/Pictures/wallpapers` |
 | `docs` | The guides — **not** installed, reference only |

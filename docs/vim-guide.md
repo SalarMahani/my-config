@@ -11,6 +11,47 @@ Your zsh command line also uses vi keybindings (`bindkey -v`), so the motions
 you learn here work when editing commands too — see the
 [shell guide](shell-guide.md), §6.
 
+## ⚠️ You have three separate vim configurations
+
+They are easy to confuse because all three use vim motions and a `<space>`
+leader, but **no file is shared between them** — each editor reads its own:
+
+| File | Read by | Tracked as |
+|---|---|---|
+| `~/.vimrc` | **vim** itself, in the terminal | `vim/.vimrc` |
+| `~/.ideavimrc` | **JetBrains IDEs** (Rider, WebStorm) via the IdeaVim plugin | `vim/.ideavimrc` |
+| `settings.json` → `vim.*` keys | **VS Code**, via the VSCodeVim extension | `vscode/.config/Code/User/settings.json` |
+
+**VS Code does not read any vimrc file.** VSCodeVim *can* be told to, with
+`vim.vimrc.enable`, but that setting is absent from your `settings.json` — so
+your VS Code vim mappings come entirely from the `vim.normalModeKeyBindings…`
+arrays in that file. Editing `~/.ideavimrc` has no effect on VS Code.
+
+`.ideavimrc` belongs to the JetBrains IDEs, of which you have several profiles
+under `~/.config/JetBrains/` (Rider 2025.2, WebStorm 2024.3 through 2026.1). It
+is 186 lines and uses two things that only exist there:
+
+- **`:action <Name>`** — invokes a JetBrains IDE action, e.g.
+  `nnoremap <leader>f :action CollapseRegion<CR>`. Plain vim has no equivalent.
+- **`Plug '…'`** — declares one of IdeaVim's *emulated* plugins. It does not
+  download anything; IdeaVim ships reimplementations of `vim-surround`,
+  `vim-commentary`, `easymotion`, `vim-sneak`, `nerdtree`,
+  `ReplaceWithRegister`, `argtextobj`, `vim-multiple-cursors` and
+  `highlightedyank`, and this line switches them on.
+
+Neither works in terminal vim. Copying lines between these files will silently
+fail rather than error.
+
+If you ever *do* want VS Code to read a vimrc, add:
+
+```jsonc
+"vim.vimrc.enable": true,
+"vim.vimrc.path": "~/.vimrc"
+```
+
+Be aware it is a partial implementation — `:action` and `Plug` lines will not
+work there either.
+
 ---
 
 ## Table of Contents

@@ -1,0 +1,186 @@
+"🔥 Highlight copied text
+Plug 'machakann/vim-highlightedyank'
+let g:highlightedyank_highlight_duration = 800  " Highlight lasts for 1 second
+let g:highlightedyank_highlight_color = "rgba(90, 90, 90, 170)"
+
+nnoremap <leader>f :action CollapseRegion<CR>
+
+nnoremap <leader>u :action ExpandRegion<CR>
+" i don't know what they are:
+" text scroll if you mouse-click near the start or end of the window.
+set scrolloff=10
+
+"set relative number
+"set relativenumber
+
+
+" Do incremental searching.
+set incsearch
+
+" Don't use Ex mode, use Q for formatting.
+map Q gq
+
+
+"🔥 Set leader key to space
+let g:mapleader = " "
+
+"🔥  navigate through suggestion & move up and down lines
+
+"Use <C-m> and <C-k> to navigate through suggestion menu
+inoremap <expr> <C-m> "\<C-n>"
+inoremap <expr> <C-k> "\<C-p>"
+
+" Use Alt+j and Alt+k to move up and down lines
+nnoremap <M-j> :m .+1<CR>
+nnoremap <M-k> :m .-2<CR>
+
+
+
+"🔥  Window Management
+
+" Vertical split window with space + vs
+nnoremap <silent> <leader>vs :vsplit<CR>
+
+" Horizontal split window with space + hs
+nnoremap <silent> <leader>hs :split<CR>
+
+" Close current window with space + x
+nnoremap <silent> <leader>f :q<CR>
+
+
+" Close other windows with space + o
+nnoremap <silent> <leader>y :only<CR>
+
+" Save and close the current window with space + wq
+nnoremap <silent> <leader>wq :w<CR>:q<CR>
+
+"🔥  Navigate Between Windows
+
+" Move to the window above with space + wk
+nnoremap <silent> <leader>wk <C-W>k<CR>
+
+" Move to the window below with space + wj
+nnoremap <silent> <leader>wj <C-W>j<CR>
+
+" Move to the window on the left with space + wh
+nnoremap <silent> <leader>wh <C-W>h<CR>
+
+" Move to the window on the right with space + wl
+nnoremap <silent> <leader>wl <C-W>l<CR>
+
+"🔥  Navigate Between terminal, project tool
+
+" it will open the terminal  space + 2
+nnoremap <leader>2 :action ActivateTerminalToolWindow<CR>
+
+" Map space + 3 to activate the Project Tool Window
+nnoremap <leader>3 :action ActivateProjectToolWindow<CR>
+
+" Map space + 2 to activate the Project Tool Window
+nnoremap <leader>c :action HideActiveWindow<CR>
+
+
+"🔥  action: save, run , opening file
+" it will do as ctrl+s => space +s
+nnoremap <leader>s :action SaveAll<CR>
+
+" Run action with space + Enter
+nnoremap <leader><CR> :action Run<CR>
+
+"open file space + o
+nnoremap <leader>o :action OpenFile<CR>
+
+nnoremap <leader>y ggVGy:action Copy<CR>
+
+"🔥  multiple-cursor
+Plug 'terryma/vim-multiple-cursors'
+" Add a cursor at the next occurrence of the word under the cursor
+nmap <C-n> <Plug>NextWholeOccurrence
+xmap <C-n> <Plug>NextWholeOccurrence
+
+" Add a cursor at the next occurrence of the selected text
+nmap g<C-n> <Plug>NextOccurrence
+xmap g<C-n> <Plug>NextOccurrence
+
+" Skip the current occurrence and move to the next
+xmap <C-x> <Plug>SkipOccurrence
+
+" Remove the last added cursor
+xmap <C-p> <Plug>RemoveOccurrence
+
+" Select all occurrences of the word under the cursor
+nmap <leader><C-n> <Plug>AllWholeOccurrences
+xmap <leader><C-n> <Plug>AllWholeOccurrences
+
+" Select all occurrences of the selected text
+nmap <leader>g<C-n> <Plug>AllOccurrences
+xmap <leader>g<C-n> <Plug>AllOccurrences
+
+"🔥 easymotion
+Plug 'easymotion/vim-easymotion'
+map <Leader><Leader> <Plug>(easymotion-s)
+
+"🔥 argtextobj
+Plug 'vim-scripts/argtextobj.vim'
+let g:argtextobj_pairs = "(:),{:},<:>"
+
+
+"🔥 matchit.vim
+Plug 'vim-matchit'
+
+
+"🔥  Commentary plugin
+Plug 'tpope/vim-commentary'
+
+
+"🔥  sneak plugin
+
+Plug 'justinmk/vim-sneak'
+
+
+
+"🔥  nerd tree
+Plug 'preservim/nerdtree'
+
+
+"🔥  surround plugin
+Plug 'tpope/vim-surround'
+
+
+"🔥 replace with register
+Plug 'vim-scripts/ReplaceWithRegister'
+
+" 🔥 Move to the previous tab with Alt + H
+map <M-,> :action PreviousTab<CR>
+
+" Move to the next tab with Alt + L
+map <M-.> :action NextTab<CR>
+
+" To run the QuickJavaDoc action in IdeaVim using <leader>d
+nmap <leader>d :action QuickJavaDoc<CR>
+
+" To run the  ShowErrorDescription action in IdeaVim using <leader>e
+nmap <leader>e :action ShowErrorDescription<CR>
+
+"--------------	a-----
+
+" I like using H and L for beginning/end of line
+nmap H ^
+nmap L g_
+" Visual mode (important!)
+vnoremap H ^
+vnoremap L g_
+
+vnoremap J :m '>+1<CR>gv=gv
+vnoremap K :m '<-2<CR>gv=gv
+
+" Yank to system clipboard
+vnoremap y "+y
+nnoremap <leader>Plug o<esc>p<cR>
+
+"easymotion feature
+"map <leader>j <Plug>(easymotion-s)
+map ; <Plug>(easymotion-next)
+map , <Plug>(easymotion-prev)
+
+

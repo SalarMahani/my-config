@@ -15,7 +15,7 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [mako-guide.md](mako-guide.md) | Notifications — sender vs displayer, criteria, do-not-disturb | Notifications look wrong, do not appear, or stay too long |
 | [vscode-guide.md](vscode-guide.md) | VS Code — settings, Vim mode, keybindings, extensions | Editor settings, a keybinding not firing, setting up a new machine |
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
-| [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, leader key, netrw | Editing settings, indentation, adding mappings |
+| [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, `.ideavimrc` for JetBrains, leader key, netrw | Editing settings, indentation, adding mappings, or working out which of your three vim configs to change |
 
 ## Start here
 

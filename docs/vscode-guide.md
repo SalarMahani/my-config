@@ -71,6 +71,11 @@ You run the `vscodevim.vim` extension with `<space>` as leader, matching your
 real `.vimrc` ([vim-guide.md](vim-guide.md), §2). The muscle memory carries
 across the editor, the terminal (`bindkey -v` in zsh) and vim itself.
 
+⚠️ **VS Code does not read a vimrc file.** Every mapping below comes from the
+`vim.*` arrays in `settings.json`. In particular it does **not** read
+`~/.ideavimrc` — that belongs to the JetBrains IDEs. See
+[vim-guide.md](vim-guide.md) for the three-way split.
+
 ```jsonc
 "vim.leader": "<space>",
 "vim.useSystemClipboard": true,

@@ -20,3 +20,4 @@ vitest.explorer
 vscodevim.vim
 wallabyjs.quokka-vscode
 xabikos.javascriptsnippets
+# direction-test
