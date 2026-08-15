@@ -1,12 +1,22 @@
-# Default config for sway
+# Sway configuration — albos / Fedora 44 / Acer laptop (Intel i915)
 #
-# Copy this to ~/.config/sway/config and edit it to your liking.
+# Full prose guide, including the reasoning behind the workspace scheme:
+#   ~/Desktop/doc/README.md   (tracked at ~/dotfiles/docs/sway-guide.md)
 #
-# Read `man 5 sway` for a complete reference.
+# Reference: man 5 sway.  Validate an edit with `sway --validate` BEFORE
+# reloading with $mod+Shift+c.
+#
+# Section order below is deliberate and worth keeping:
+#   1 variables · 2 input · 3 outputs · 4 appearance · 5 window rules
+#   6 startup · 7 key bindings · 8 modes · 9 include
+# Only two orderings actually matter to sway: variables must be `set` before
+# they are used, and the `include` on the last line must STAY last, because
+# config.d/ loads after this file and overrides it.
 
-### Variables
-#
-# Logo key. Use Mod1 for Alt.
+
+### 1. Variables ###########################################################
+
+# Logo key. Mod1 is Alt (not Super — most sway tutorials online assume Mod4).
 set $mod Mod1
 
 set $left h
@@ -14,7 +24,18 @@ set $down j
 set $up k
 set $right l
 
-#remap caps lock to be esc
+# Preferred terminal emulator
+set $term kitty
+
+# Helper scripts. Every use below is inside `exec`, which runs through a
+# shell, so the ~ expands correctly.
+set $scripts ~/.config/sway/scripts
+
+
+### 2. Input devices #######################################################
+
+# caps lock becomes esc; shift+caps is still caps lock.
+# Both shifts together toggle the us/ir keyboard layout.
 input "type:keyboard" {
     xkb_layout "us,ir"
     xkb_options "caps:escape_shifted_capslock,grp:shifts_toggle"
@@ -24,17 +45,9 @@ input "type:touchpad" {
     natural_scroll enable
 }
 
-# Your preferred terminal emulator
-set $term kitty
 
-# Your preferred application launcher
-set $rofi_cmd rofi \
-        -terminal '$term'
-set $menu $rofi_cmd -show combi -combi-modes drun#run -modes combi
+### 3. Outputs and workspaces ##############################################
 
-exec_always /home/albos/.config/sway/scripts/waybar-restart.sh
-
-### Output configuration
 # Laptop (eDP-1) on the LEFT, external monitor (HDMI-A-1, LG W2286) on the
 # RIGHT. Move the mouse right to reach the right monitor.
 #
@@ -75,10 +88,20 @@ workspace 6 output HDMI-A-1
 workspace 8 output HDMI-A-1
 workspace 10 output HDMI-A-1
 
+
+### 4. Appearance ##########################################################
+
 # Wallpaper: sway's native bg applies the image to every output.
 output * bg /home/albos/Pictures/wallpapers/02.png fill
 
-bindsym $mod+shift+w exec ~/.config/sway/scripts/wallpaper-next.sh
+# 1-pixel border, no title bar. Alternatives: normal, none, pixel <n>.
+default_border pixel 1
+
+# Drag floating windows by holding $mod and the left mouse button.
+floating_modifier $mod normal
+
+
+### 5. Window rules ########################################################
 
 # ── FIX: "black background on second monitor (HDMI-A-1)" ────────────────────
 # Symptom : after reboot the external monitor showed a solid black screen
@@ -96,39 +119,47 @@ bindsym $mod+shift+w exec ~/.config/sway/scripts/wallpaper-next.sh
 for_window [class="xwaylandvideobridge"] floating enable, opacity 0, fullscreen disable, move to scratchpad
 # ────────────────────────────────────────────────────────────────────────────
 
-#lock config:
+
+### 6. Startup programs ####################################################
+
+# exec_always re-runs on every reload; exec runs ONLY at sway startup.
+# That distinction matters below: editing the swayidle timers and pressing
+# $mod+Shift+c will NOT apply them — the old swayidle keeps its old timers.
+# You must `pkill -x swayidle` and re-run it, or log out and back in.
+
+# Bar. The script kills the old instance first, so reloading never stacks
+# up duplicate bars.
+exec_always $scripts/waybar-restart.sh
+
+# Idle chain: lock at 15:00, blank the screens at 15:05, lock before sleep.
+#
+# The $scripts paths here are deliberately UNQUOTED while the swaymsg commands
+# are quoted. $scripts expands to a ~ path, and a shell only expands ~ when it
+# is unquoted — '~/...' and "~/..." both stay literal and swayidle would fail
+# to find the script. The paths contain no spaces, so they remain one argument.
+# The swaymsg commands do contain spaces, so they must keep their quotes.
 exec swayidle -w \
-    timeout 900 '/home/albos/.config/sway/scripts/lock.sh' \
+    timeout 900 $scripts/lock.sh \
     timeout 905 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-    before-sleep '/home/albos/.config/sway/scripts/lock.sh'
+    before-sleep $scripts/lock.sh
 
-bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
 
-### Key bindings
-#
-# Basics:
-#
+### 7. Key bindings ########################################################
+
+## 7.1 Basics
+
     # Start a terminal
     bindsym $mod+Return exec $term
 
-    # Kill focused window
+    # Kill focused window (two bindings, both intentional)
     bindsym $mod+Shift+q kill
     bindsym $mod+x kill
 
-    # Start your launcher
+    # Application launcher
     bindsym $mod+space exec rofi -show drun
 
-    # Drag floating windows by holding down $mod and left mouse button.
-    floating_modifier $mod normal
+## 7.2 Focus and movement
 
-    # Reload the configuration file
-    bindsym $mod+Shift+c reload
-
-    # Exit sway (logs you out of your Wayland session)
-    bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
-#
-# Moving around:
-#
     # Move your focus around
     bindsym $mod+$left focus left
     bindsym $mod+$down focus down
@@ -150,10 +181,12 @@ bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
     bindsym $mod+Shift+Down move down
     bindsym $mod+Shift+Up move up
     bindsym $mod+Shift+Right move right
-#
-# Workspaces:
-#
-    # Switch to workspace
+
+## 7.3 Workspaces
+
+    # Absolute jumps. With the parity pins in section 3, these also choose a
+    # MONITOR: odd numbers are on the laptop, even ones on the external, so
+    # $mod+4 from the laptop moves your focus to the external screen.
     bindsym $mod+1 workspace number 1
     bindsym $mod+2 workspace number 2
     bindsym $mod+3 workspace number 3
@@ -177,9 +210,9 @@ bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
     bindsym $mod+Shift+0 move container to workspace number 10
 
     # ── Walk the workspaces that exist ON THE CURRENT MONITOR ───────────────
-    # $mod+1..0 above jumps to one fixed workspace wherever it lives. These
-    # instead treat the current monitor's workspaces as a strip you walk left
-    # and right, so you can flip between them without remembering numbers.
+    # The number keys above jump to one fixed workspace wherever it lives.
+    # These instead treat the current monitor's workspaces as a strip you walk
+    # left and right, so you can flip between them without remembering numbers.
     #
     #   $mod+period  -> one step right. At the last workspace there is nowhere
     #                   left to go, so it APPENDS a new empty workspace and
@@ -191,20 +224,20 @@ bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
     # mean either "wrap to the first" or "append a new one" and it cannot be
     # both. Sway's built-in `workspace next_on_output`/`prev_on_output` do the
     # walking but always wrap and never append, hence the script.
-    bindsym $mod+period exec ~/.config/sway/scripts/ws-cycle.py next
-    bindsym $mod+comma  exec ~/.config/sway/scripts/ws-cycle.py prev
+    bindsym $mod+period exec $scripts/ws-cycle.py next
+    bindsym $mod+comma  exec $scripts/ws-cycle.py prev
 
     # Same idea, but drag the focused window along with you. Uses the same
     # script so these stay consistent with the two above; the built-in
     # `move container to workspace next_on_output` would wrap instead of append.
-    bindsym $mod+Shift+period exec ~/.config/sway/scripts/ws-cycle.py next --take
-    bindsym $mod+Shift+comma  exec ~/.config/sway/scripts/ws-cycle.py prev --take
+    bindsym $mod+Shift+period exec $scripts/ws-cycle.py next --take
+    bindsym $mod+Shift+comma  exec $scripts/ws-cycle.py prev --take
     # ────────────────────────────────────────────────────────────────────────
-#
-# Layout stuff:
-#
+
+## 7.4 Layout
+
     bindsym $mod+b splith
-    bindsym $mod+shift+v splitv
+    bindsym $mod+Shift+v splitv
 
     # Switch the current container between different layout styles
     bindsym $mod+s layout stacking
@@ -219,27 +252,43 @@ bindsym $mod+shift+x exec /home/albos/.config/sway/scripts/lock.sh
 
     # Move focus to the parent container
     bindsym $mod+a focus parent
-#
-# Scratchpad:
-#
+
+## 7.5 Scratchpad
+
     # Move the currently focused window to the scratchpad
     bindsym $mod+Shift+minus move scratchpad
 
     # Show the next scratchpad window or hide the focused scratchpad window.
     bindsym $mod+minus scratchpad show
 
-# border config:
-default_border pixel 1
+## 7.6 Session and system
 
-#
-# Resizing containers:
-#
+    # Reload the configuration file
+    bindsym $mod+Shift+c reload
+
+    # Lock the screen now
+    bindsym $mod+Shift+x exec $scripts/lock.sh
+
+    # Next wallpaper
+    bindsym $mod+Shift+w exec $scripts/wallpaper-next.sh
+
+    # Exit sway (logs you out of your Wayland session)
+    bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+
+
+### 8. Modes ###############################################################
+
+# A mode is a modal keymap, like vim's insert mode. $mod+r enters resize mode,
+# where h/j/k/l and the arrow keys resize instead of moving focus.
 mode "resize" {
     bindsym $left resize shrink width 10px
     bindsym $down resize grow height 10px
     bindsym $up resize shrink height 10px
     bindsym $right resize grow width 10px
 
+    bindsym Left resize shrink width 10px
+    bindsym Down resize grow height 10px
+    bindsym Up resize shrink height 10px
     bindsym Right resize grow width 10px
 
     # Return to default mode
@@ -248,5 +297,17 @@ mode "resize" {
 }
 bindsym $mod+r mode "resize"
 
-# Include configs from 3 locations:
+
+### 9. Include — MUST stay last ############################################
+
+# Fedora's layered include, merging three directories in priority order:
+#   /usr/share/sway/config.d/  (package)  <  /etc/sway/config.d/  (admin)
+#   <  ~/.config/sway/config.d/  (yours, wins)
+# Files are matched BY FILENAME, and a later directory replaces an earlier
+# file of the same name outright. That is why the empty config.d/90-bar.conf
+# is load-bearing: it shadows Fedora's bar block so waybar is not started
+# twice. Deleting it would give you two bars.
+#
+# Because this loads AFTER everything above, anything in config.d/ overrides
+# this file. Keep it on the last line.
 include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
