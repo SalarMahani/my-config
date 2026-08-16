@@ -291,29 +291,47 @@ export KEYTIMEOUT=1
 10ms — the default 0.4s makes vi mode feel sluggish.
 
 ```zsh
-function zle-keymap-select {
-  if [[ $KEYMAP == vicmd ]]; then
-    echo -ne '\e[1 q'  # block cursor = normal mode
-  else
-    echo -ne '\e[5 q'  # beam cursor = insert mode
-  fi
+autoload -Uz add-zle-hook-widget
+
+function _vi_cursor_shape {
+  case $KEYMAP in
+    vicmd) printf '\e[1 q' ;;   # block = normal mode
+    *)     printf '\e[5 q' ;;   # beam  = insert mode
+  esac
 }
-zle -N zle-keymap-select
+add-zle-hook-widget keymap-select _vi_cursor_shape
+
+function _vi_cursor_beam { printf '\e[5 q' }
+add-zle-hook-widget line-init _vi_cursor_beam
+
+autoload -Uz add-zsh-hook
+function _vi_cursor_block { printf '\e[1 q' }
+add-zsh-hook preexec _vi_cursor_block
 ```
 
-A **zle widget** — a hook zsh's line editor calls on every mode change — that
-switches the cursor shape so you can see which mode you are in. `zle -N`
-registers it. The escape codes are terminal cursor-shape controls: `1` block,
-`3` underline, `5` beam.
+The cursor shape follows the mode, so you can see which one you are in. The
+escape codes are terminal cursor-shape controls: `1` block, `3` underline,
+`5` beam.
 
-*Known rough edge:* there is no `zle-line-init` companion, so after running a
-command the cursor keeps whatever shape it last had rather than resetting to
-beam. To fix:
+**Three hooks, and all three are needed.**
 
-```zsh
-function zle-line-init { echo -ne '\e[5 q'; }
-zle -N zle-line-init
-```
+`keymap-select` fires when the keymap changes — that is the obvious one, and on
+its own it used to be the whole implementation. It is not enough: it fires only
+on a *change*, and pressing `Esc` then `Enter` starts the next line back in
+`viins` with no change event. The prompt kept showing a block cursor while zsh
+was really in insert mode. `line-init` fixes that by resetting the shape at
+every new prompt. `preexec` hands a block to full-screen programs, so `vim`,
+`less` and `man` do not inherit a beam.
+
+**Why `add-zle-hook-widget` and not `zle -N`.** `zle -N` *replaces* the widget
+on a hook. Powerlevel10k puts its own widgets on `keymap-select` and
+`line-init` to drive the `❯` / `❮` prompt char, so registering with `zle -N`
+here would silently break the prompt indicator. `add-zle-hook-widget` chains
+onto whatever is already registered instead, and both survive.
+
+*Fixed 2026-08-16. A/B tested on a pty: before, pressing `Enter` emitted no
+cursor sequence at all; now it emits `ESC[5 q`, and p10k's prompt char still
+renders in both modes.*
 
 ### Key bindings
 
@@ -321,10 +339,49 @@ zle -N zle-line-init
 |---|---|
 | `^p` / `^n` | **Prefix** history search — type `git`, press `^p`, walk only `git` commands |
 | `^y` | Accept the greyed-out autosuggestion |
+| `^l` *(insert mode, kitty)* | Accept the autosuggestion — see below |
+| `^l` *(insert mode, VS Code panel)* | Focuses the editor — VS Code intercepts it; use `^y` there |
+| `^l` *(normal mode)* | `clear-screen`, zsh's default |
 | `Backspace` / `Delete` | Rebound because vi insert mode does not handle them by default |
 
 `history-search-backward` is prefix-aware, unlike plain up-arrow. It is the most
 useful binding in the file.
+
+`^l` is bound with `bindkey -M viins` — **insert mode only**, deliberately. It
+is `clear-screen` by default in both keymaps, and overriding it everywhere
+would cost the standard "clear the terminal" key. Scoped this way, insert mode
+accepts the suggestion and normal mode still clears, so clearing is `Esc` then
+`^l` and nothing is lost.
+
+These keys only reach zsh at all because VS Code was made to stop intercepting
+them — `^l`, `^p`, `^n`, `^h`, `^i` and `Esc` were all bound in its
+`keybindings.json`. See
+[keybinding-changes.md](keybinding-changes.md).
+
+---
+
+## 6b. Reading markdown — `md`
+
+```zsh
+md <file>   # read it rendered, with a cursor
+md          # browse every .md below the current directory
+```
+
+`md` renders markdown with [glow](https://github.com/charmbracelet/glow):
+styled headings, bordered tables, highlighted code blocks. It is defined in
+`.zshrc`, and it does **not** call `glow --pager`.
+
+**Why not the pager.** Glow's pager scrolls but has no cursor, so you cannot see
+which line you are on and none of `j`, `k`, `/`, `gg` or `G` work. `md` hands
+off to vim's `:Glow` instead, which runs glow inside a vim *terminal buffer* —
+glow's colours and layout, vim's cursor and motions. `q` quits. Full details in
+[vim-guide.md](vim-guide.md#6-reading-markdown).
+
+For the plain, faster pager without a cursor, call glow directly: `glow -p <file>`.
+
+Configuration lives in the `glow` package (`~/.config/glow/`), including a
+custom style built from kitty's Dimmed Monokai palette so rendered markdown
+matches the terminal around it.
 
 ---
 
@@ -409,6 +466,12 @@ no duplicates.
 
 **A dead alias.** `alias ls='ls --color'` was overridden 40 lines later by the
 `eza` alias. Removed.
+
+**The vi-mode cursor got stuck.** Only `zle-keymap-select` was hooked, and it
+fires solely on a keymap *change* — so `Esc` then `Enter` left the next prompt
+showing a block cursor while zsh was back in insert mode. Fixed with `line-init`
+and `preexec` hooks, installed via `add-zle-hook-widget` so Powerlevel10k's
+widgets on the same hooks survive. See [§6](#6-vi-mode).
 
 ---
 

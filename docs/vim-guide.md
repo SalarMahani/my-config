@@ -61,6 +61,7 @@ work there either.
 3. [netrw, the built-in file browser](#3-netrw-the-built-in-file-browser)
 4. [Worth adding next](#4-worth-adding-next)
 5. [Troubleshooting](#5-troubleshooting)
+6. [Reading markdown](#6-reading-markdown)
 
 ---
 
@@ -132,8 +133,26 @@ A built-in scheme — no download needed. See the others with `:colorscheme` the
 `Tab`, or preview one live with `:colorscheme habamax`. Built-ins worth trying:
 `habamax`, `slate`, `industry`, `retrobox`.
 
-Note this does not match your terminal's Dimmed Monokai theme, but it will still
-look reasonable because it draws from the same 16 ANSI colours kitty defines.
+It does not match your terminal's Dimmed Monokai theme. It no longer draws from
+kitty's 16 ANSI colours either, because the block immediately above it now
+enables `termguicolors`:
+
+```vim
+if has('termguicolors') && ($COLORTERM ==# 'truecolor' || $COLORTERM ==# '24bit')
+  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
+  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
+  set termguicolors
+endif
+```
+
+That is there for [`:Glow`](#6-reading-markdown) — glow emits 24-bit colour, and
+without this vim squashes it to the nearest of 256, so a custom style renders
+approximately rather than exactly. `t_8f`/`t_8b` have to be set explicitly: vim
+infers them for only a handful of `TERM` values and `xterm-kitty` is not one, so
+`termguicolors` alone would produce no colour at all.
+
+**Side effect:** `desert` now uses its *gui* colours rather than its 256-colour
+ones. Delete those four lines to go back.
 
 ```vim
 let mapleader = " "
@@ -308,3 +327,88 @@ without any config at all (useful for isolating a problem): `vim -u NONE`.
 
 **No system clipboard.** Expected — this vim is built `-clipboard`. Either
 install `gvim` or use `:w !wl-copy`. See section 4.
+
+---
+
+## 6. Reading markdown
+
+Two views, the same split VS Code has between its editor and its preview pane.
+
+### The source, made readable
+
+An `autocmd FileType markdown` in `.vimrc`. Nothing here needs a plugin — vim
+already ships `syntax/markdown.vim` and `ftplugin/markdown.vim`, and Fedora's
+`/etc/vimrc` runs `syntax on`, so `.md` files were *already* highlighted. What
+was missing was the view.
+
+| Setting | Why |
+|---|---|
+| `linebreak` | `wrap` was on but broke mid-word — the single biggest win |
+| `breakindent` + `breakindentopt=shift:2` | a wrapped bullet stays indented under its parent instead of resetting to column 0 |
+| `showbreak=↳ ` | marks a continuation line |
+| `conceallevel=2`, `concealcursor=nc` | hides `**` `__` `~~`; re-reveals them on the cursor line so editing still shows the real text |
+| `j` `k` `0` `$` → `gj` `gk` `g0` `g$` | buffer-local: move by *screen* line, so `j` does not jump a whole wrapped paragraph |
+| `foldcolumn=4`, `nonumber` | a left margin and less clutter — vim has no built-in zen mode |
+
+Plus `let g:markdown_folding = 1`, which turns on header folding using
+`MarkdownFold()` from vim's own ftplugin. The function is always present; it
+just checks that variable, which defaults to `0`. `zM` folds every section into
+a table of contents, `zR` unfolds, `za` toggles one.
+
+`showbreak` is set with `let &l:showbreak = '↳ '` rather than
+`setlocal showbreak=↳\ `. The `set` spelling needs a backslash-escaped trailing
+space, which anything that trims trailing whitespace silently eats — leaving a
+stray backslash on every wrapped line.
+
+### The rendered view — `:Glow`
+
+```
+:Glow          render the current buffer, unsaved edits included
+:Glow {file}   render a file on disk
+<leader>m      same as :Glow, in any markdown buffer
+```
+
+Requires `glow` (`sudo dnf install glow`).
+
+Glow runs to completion inside a vim **terminal buffer**. Once the job exits the
+buffer is navigable, so you keep glow's colours and layout *and* get a real
+cursor with every vim motion. Deliberately not `glow --pager`: glow's own pager
+scrolls but has no cursor, so there is no way to see which line you are on.
+
+| Key | Does |
+|---|---|
+| `j` `k` `gg` `G` `/` `n` | ordinary vim motions over the rendered text |
+| `c` | toggle the current-line highlight (off by default) |
+| `q` | quit |
+
+`q` branches on `tabpagenr('$')`: it closes the tab when there is another, and
+quits vim when the render is the only tab — which is the case when you arrive
+from the shell's `md`, whose wrapper runs `tabonly`. Without the branch it fails
+with `E784: Cannot close last tab page`.
+
+### Three things that were not obvious
+
+**glow renders monochrome inside vim's terminal.** It probes the terminal for
+its background colour and waits for a reply; vim's terminal does not answer, so
+glow times out and drops to its no-colour profile. `TERM=xterm-256color`,
+`TERM=xterm-direct`, `COLORTERM=truecolor`, `CLICOLOR_FORCE=1` and
+`FORCE_COLOR=1|3` were each tried, alone and combined — none worked. The fix is
+`~/.local/bin/glow-pty`, a wrapper that runs glow on a pty it controls, answers
+the probes, and relays the bytes through. Vim renders truecolour fine; it just
+does not speak the query half of the protocol.
+
+**glow does not reliably expand `~` in its config's style path.** It fails with
+`glamour: error reading file: open ~/.config/glow/...` — and fails by silently
+rendering without colour rather than stopping, which makes it easy to miss.
+`glow.yml` uses an absolute path.
+
+**`desert` made the reading surface too light.** With `termguicolors` on, the
+terminal buffer adopts `hi Normal guibg=#333333`. `term_start`'s
+`term_highlight` option scopes an override to that one buffer, so the reader
+sits on kitty's `#1e1e1e` while the editor and any other `:terminal` keep
+`desert`.
+
+### From the shell
+
+`md <file>` opens the same view without going through vim first. See
+[shell-guide.md §6b](shell-guide.md#6b-reading-markdown--md).

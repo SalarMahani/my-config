@@ -1,0 +1,32 @@
+# Rendered-markdown reader. See docs/keybinding-changes.md and the `md`
+# function in shell/.zshrc.
+
+# Custom style matching kitty's "Dimmed Monokai" theme, so rendered markdown
+# uses the same palette as the terminal around it rather than fighting it.
+# Built from the exact colours in kitty/.config/kitty/current-theme.conf --
+# keep the two in sync by hand if you ever re-run `kitten themes`.
+#
+# Absolute path on purpose. glow's handling of ~ here is inconsistent: run
+# directly it appears to work, but the same config under a pty fails with
+# "glamour: error reading file: open ~/.config/glow/dimmed-monokai.json: no
+# such file or directory" -- and it fails by silently rendering with NO colour
+# rather than stopping, which is easy to miss. An absolute path always works.
+#
+# This is the repo's usual portability wart (see README §8, same as lock.sh and
+# the wallpaper paths): change the username when moving to another machine.
+style: "/home/albos/.config/glow/dimmed-monokai.json"
+
+# glow's own default is 80, but these docs are already hard-wrapped near 80,
+# so glow re-wraps already-wrapped prose and strands orphan fragments.
+# `md` and vim's :Glow both override this with the real terminal width; this
+# value only applies when you run bare `glow`.
+width: 100
+
+# TUI-mode only.
+mouse: false
+all: false
+
+# Left off deliberately: the pager has no cursor, so there is no way to see
+# which line you are on. `md <file>` routes through vim's :Glow instead, which
+# renders into a terminal buffer that DOES have one.
+pager: false

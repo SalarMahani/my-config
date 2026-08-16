@@ -42,6 +42,8 @@ shell/.zshrc               ->   ~/.zshrc
 | `shell` | `.zshrc`, `.zshenv`, `.bashrc`, `.profile`, `.p10k.zsh` |
 | `vim` | `.vimrc` (terminal vim) and `.ideavimrc` (JetBrains IdeaVim) |
 | `git` | `.gitconfig` |
+| `glow` | Markdown renderer config and the Dimmed Monokai style |
+| `bin` | `~/.local/bin` helpers (`glow-pty`) |
 | `wallpapers` | 12 images → `~/Pictures/wallpapers` |
 | `docs` | The guides — **not** installed, reference only |
 
@@ -143,7 +145,7 @@ sudo dnf install -y \
   sway swaylock swayidle swaybg \
   waybar kitty rofi \
   zsh zsh-autosuggestions zsh-syntax-highlighting \
-  eza jq python3 git vim-enhanced \
+  eza jq python3 git vim-enhanced glow \
   libnotify grimshot brightnessctl pulseaudio-utils wl-clipboard \
   papirus-icon-theme mako
 ```
@@ -295,6 +297,11 @@ and the four plugins — it is not a hang, and it happens only once.
 ## 8. Adjust for the new hardware
 
 Two things are specific to this laptop and will need editing:
+
+**Style files that duplicate another config** — `glow/.config/glow/dimmed-monokai.json`
+copies kitty's palette from `kitty/.config/kitty/current-theme.conf`, and
+`glow.yml` names an absolute `/home/albos` path. Both need updating if you
+change the kitty theme or the username.
 
 **Monitor names and positions** — sway config §3 names `eDP-1` for the laptop
 panel, and both `DP-1` and `HDMI-A-1` for the external (its connector name varies

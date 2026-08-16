@@ -148,6 +148,34 @@ bindkey -M viins '^y' autosuggest-accept
 bindkey -M viins '^l' autosuggest-accept
 
 
+### Markdown ###############################################################
+
+# Read a rendered .md instead of its source: styled headings, bordered tables,
+# highlighted code blocks.
+#
+#   md <file>   read it, with a cursor
+#   md          browse every .md under the current directory (glow's own TUI)
+#
+# `md <file>` hands off to vim's :Glow rather than calling `glow --pager`.
+# Glow's pager scrolls but has no cursor, so you cannot see which line you are
+# on and none of j/k, /search or gg/G work. :Glow runs glow inside a vim
+# terminal buffer instead, which keeps glow's colours and layout but gives you
+# a real cursor and a highlighted current line. `q` quits.
+#
+# For the plain, faster pager without a cursor, call glow directly:
+#   glow -p <file>
+md() {
+  if (( ! $# )); then
+    glow --tui .
+    return
+  fi
+  # -c "Glow <path>" runs before tabonly, which then discards vim's empty
+  # startup tab and leaves only the rendered one -- so `q` exits straight back
+  # to the shell. :Glow uses <q-args>, so paths containing spaces survive.
+  vim -c "Glow $1" -c 'tabonly'
+}
+
+
 ### Aliases ################################################################
 
 alias ls='eza --icons'
