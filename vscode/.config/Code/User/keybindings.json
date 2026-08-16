@@ -29,18 +29,26 @@
     "when": "accessibilityHelpIsShown && accessibleViewHasUnassignedKeybindings"
   },
   {
-    // Was alt+k -- sway binds $mod+k to focus-up. ctrl+shift+up also carries
-    // terminal resizePaneUp, but that one is `when: terminalFocus` and this one
-    // is `when: editorTextFocus`, so the two contexts never overlap.
-    "key": "ctrl+shift+up",
+    // Move the current line, vim-style: k up, j down. Was alt+k (dead to sway,
+    // which binds $mod+k to focus-up), then briefly ctrl+shift+<arrow>.
+    //
+    // Bare ctrl+k is safe here: it is normally VS Code's chord PREFIX, but this
+    // config has no active `ctrl+k <key>` chords left to break. Both are scoped
+    // to editorTextFocus so the terminal still receives ^J and ^K, which are a
+    // literal newline and a control character respectively.
+    //
+    // ctrl+j/ctrl+k are also bound to selectNext/PrevCodeAction further down
+    // this file. That is deliberate: those carry `when: codeActionMenuVisible`
+    // and sit LATER, so they win while the quick-fix menu is open and these
+    // apply everywhere else.
+    "key": "ctrl+k",
     "command": "editor.action.moveLinesUpAction",
     "when": "editorTextFocus && !editorReadonly"
   },
   {
-    // The missing counterpart. VS Code's alt+down default was deleted below but
-    // never re-bound, so moving a line DOWN had no key at all -- alt+j would not
-    // have worked either, since sway binds $mod+Down and $mod+j to focus-down.
-    "key": "ctrl+shift+down",
+    // VS Code's alt+down default was deleted below and never re-bound, so
+    // moving a line DOWN had no key at all until this was added.
+    "key": "ctrl+j",
     "command": "editor.action.moveLinesDownAction",
     "when": "editorTextFocus && !editorReadonly"
   },
@@ -157,31 +165,39 @@
     "command": "-auto-close-tag.closeTag"
   },
   {
-    // Was alt+. -- dead, because sway binds $mod+period to ws-cycle.py. Every
-    // alt+ combo below that sway claims has been moved onto ctrl+ for the same
-    // reason. Mirrors `.` = next editor in vim normal mode, so it now works in
-    // insert mode too.
-    "key": "ctrl+.",
-    "command": "workbench.action.nextEditor"
+    // Next editor tab. Was alt+. (dead -- sway binds $mod+period to
+    // ws-cycle.py), then ctrl+. until that key was given to terminal
+    // navigation. Mirrors `.` = next editor in vim normal mode, so it works in
+    // insert mode too. Left unscoped, so it reaches editor tabs from the
+    // terminal as well.
+    "key": "ctrl+shift+.",
+    "command": "workbench.action.nextEditor",
+    "when": "!panelFocus"
   },
   {
     "key": "ctrl+pagedown",
     "command": "-workbench.action.nextEditor"
   },
   {
-    // Was alt+, -- sway binds $mod+comma. Mirrors `,` = previous editor in vim
-    // normal mode.
-    "key": "ctrl+,",
-    "command": "workbench.action.previousEditor"
+    // Previous editor tab -- the sibling of the rule above, same history.
+    "key": "ctrl+shift+,",
+    "command": "workbench.action.previousEditor",
+    "when": "!panelFocus"
   },
   {
     "key": "ctrl+pageup",
     "command": "-workbench.action.previousEditor"
   },
   {
-    // Moved off ctrl+p so zsh gets ^p back (.zshrc: history-search-backward).
-    // ctrl+shift+, mirrors `,` = previous editor in vim normal mode.
-    "key": "ctrl+shift+,",
+    // Previous terminal. Moved off ctrl+p so zsh gets ^p back (.zshrc:
+    // history-search-backward), then off ctrl+shift+, onto the plain ctrl+
+    // pair, which is the shorter reach for the thing done most often.
+    //
+    // Bare `,` and `.` -- what vim normal mode uses for editor tabs -- are NOT
+    // an option here: in a terminal those are literal characters, and VS Code
+    // has no context key exposing zsh's vi mode, so a bare binding would make
+    // `cd ..` untypeable. Only modifier combinations are safe in a terminal.
+    "key": "ctrl+,",
     "command": "workbench.action.terminal.focusPrevious",
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
@@ -191,9 +207,8 @@
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
   {
-    // Moved off ctrl+n so zsh gets ^n back (.zshrc: history-search-forward).
-    // ctrl+shift+. mirrors `.` = next editor in vim normal mode.
-    "key": "ctrl+shift+.",
+    // Next terminal -- sibling of the rule above.
+    "key": "ctrl+.",
     "command": "workbench.action.terminal.focusNext",
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
@@ -300,12 +315,23 @@
     // collision by taking the last rule whose `when` matches, so this ordering
     // is what makes ctrl+. mean "next panel view" while the panel has focus and
     // "next editor" everywhere else.
-    "key": "ctrl+.",
+    // Walk the PANEL's tabs -- Terminal, Output, Problems, Debug Console --
+    // from anywhere in the panel, the terminal included. Plain ctrl+. cannot be
+    // used for this: it belongs to terminal-to-terminal navigation, and the
+    // terminal lives IN the panel, so `panelFocus` is true while it has focus
+    // and the two would fight over the same key.
+    //
+    // Pairs with the editor-tab rules above, which are scoped `!panelFocus`.
+    // Same two keys, and which kind of tab they walk depends on where you are
+    // standing: in the panel they move between panel views, everywhere else
+    // between editor tabs. The two conditions are exact complements, so only
+    // one can ever match.
+    "key": "ctrl+shift+.",
     "command": "workbench.action.nextPanelView",
     "when": "panelFocus"
   },
   {
-    "key": "ctrl+,",
+    "key": "ctrl+shift+,",
     "command": "workbench.action.previousPanelView",
     "when": "panelFocus"
   },
@@ -315,14 +341,41 @@
     // newline. Unlike resizePaneLeft/Right these two have no Linux default to
     // fall back on (VS Code ships them mac-only), so they are re-homed here
     // rather than deleted, completing the ctrl+shift+<arrow> family.
-    "key": "ctrl+shift+up",
-    "command": "workbench.action.terminal.resizePaneUp",
-    "when": "terminalFocus"
+    // Resize the terminal, vim-style: k taller, j shorter.
+    //
+    // NOT terminal.resizePaneUp/Down, which is what used to be here. That
+    // command begins `if (!this._splitPaneContainer) return` -- it resizes panes
+    // WITHIN a split terminal and does nothing at all with a single one, so the
+    // binding had been inert since long before it moved here.
+    //
+    // increase/decreaseViewHeight are named misleadingly. They do NOT resize the
+    // focused view -- both are hardcoded to the editor part:
+    //
+    //   increaseViewHeight  "Increase Editor Height"
+    //                       resizePart(0, +INC, ..., "workbench.parts.editor")
+    //   decreaseViewHeight  "Decrease Editor Height"
+    //                       resizePart(0, -INC, ..., "workbench.parts.editor")
+    //
+    // (The focused-view commands are increase/decreaseViewSize, without the
+    // part argument.) So the effect on the terminal is the same wherever focus
+    // happens to be, and no `when` clause is needed:
+    //
+    //   editor shorter -> terminal taller   -> k
+    //   editor taller  -> terminal shorter  -> j
+    //
+    // This previously carried a terminalFocus/editorFocus pair on the false
+    // assumption that these resized the focused view, which made the keys work
+    // in the editor and behave backwards in the terminal.
+    //
+    // Overrides two VS Code defaults: ctrl+shift+k (Delete Line, which vim's
+    // `dd` already covers) and ctrl+shift+j (Toggle Search Details, already
+    // unbound further down this file).
+    "key": "ctrl+shift+k",
+    "command": "workbench.action.decreaseViewHeight"
   },
   {
-    "key": "ctrl+shift+down",
-    "command": "workbench.action.terminal.resizePaneDown",
-    "when": "terminalFocus"
+    "key": "ctrl+shift+j",
+    "command": "workbench.action.increaseViewHeight"
   },
   {
     "key": "ctrl+j",
@@ -526,10 +579,11 @@
     "command": "-workbench.action.splitEditor"
   },
   {
-    // Displaced from ctrl+, so that key could take previousEditor. Shares
-    // ctrl+shift+, with terminal.focusPrevious, which is `when: terminalFocus`;
-    // scoping this to editorFocus keeps the two from ever both matching.
-    "key": "ctrl+shift+,",
+    // Reorder the current tab. Displaced twice: off ctrl+, when that took
+    // previousEditor, then off ctrl+shift+, when THAT took previousEditor in
+    // turn. ctrl+alt+ keeps the ,/. family intact and is safe -- sway binds no
+    // ctrl combos, and ctrl+alt+<key> is not a terminal control character.
+    "key": "ctrl+alt+,",
     "command": "workbench.action.moveEditorLeftInGroup",
     "when": "editorFocus"
   },
@@ -543,9 +597,8 @@
     "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/"
   },
   {
-    // Displaced from ctrl+. so that key could take nextEditor. Same
-    // editorFocus / terminalFocus split as its ctrl+shift+, sibling above.
-    "key": "ctrl+shift+.",
+    // Sibling of the rule above.
+    "key": "ctrl+alt+.",
     "command": "workbench.action.moveEditorRightInGroup",
     "when": "editorFocus"
   },
@@ -561,6 +614,28 @@
   {
     "key": "ctrl+shift+/",
     "command": "workbench.action.joinAllGroups"
+  },
+  {
+    // Split the editor: send the CURRENT tab into a group on that side and
+    // leave every other tab behind in the one you came from. VS Code creates
+    // the group if it does not exist yet, so the first press is the split and
+    // later presses just move tabs between the two halves.
+    //
+    // Same keys as terminal-to-terminal navigation, split by context:
+    // `editorFocus` here, `terminalFocus` there, which are mutually exclusive.
+    // The direction matches the rest of the ,/. family -- comma left, period
+    // right.
+    //
+    // Duplicates <leader>sl / <leader>sr from settings.json, which do the same
+    // thing in vim normal mode, and alt+d below.
+    "key": "ctrl+.",
+    "command": "workbench.action.moveEditorToRightGroup",
+    "when": "editorFocus"
+  },
+  {
+    "key": "ctrl+,",
+    "command": "workbench.action.moveEditorToLeftGroup",
+    "when": "editorFocus"
   },
   {
     "key": "alt+d",
@@ -882,12 +957,12 @@
   },
 
  {
-    // Displaced from ctrl+. -- it sat later in this file than the new
-    // nextEditor binding, so it would have won the collision and made ctrl+.
-    // hide both panes instead of switching tabs whenever the panel and sidebar
-    // were open. Moved next to its siblings: ctrl+shift+h toggles the sidebar,
-    // ctrl+shift+l the panel, and ctrl+shift+k now toggles both at once.
-    "key": "ctrl+shift+k",
+    // Displaced twice: off ctrl+. (where it would have beaten the new nextEditor
+    // binding and hidden both panes instead of switching tabs), then off
+    // ctrl+shift+k when that became terminal resize. Sits with its siblings --
+    // ctrl+shift+h toggles the sidebar, ctrl+shift+l the panel, ctrl+shift+;
+    // both at once.
+    "key": "ctrl+shift+;",
     "command": "runCommands",
     "args": {
       "commands": [
@@ -1079,6 +1154,20 @@
   "command": "-workbench.action.terminal.suggestToggleDetails",
   "when": "simpleSuggestWidgetHasFocusedSuggestion && terminalFocus && terminalHasBeenCreated && terminalIsOpen && terminalSuggestWidgetVisible || simpleSuggestWidgetHasFocusedSuggestion && terminalFocus && terminalIsOpen && terminalProcessSupported && terminalSuggestWidgetVisible"
 },
+// Leave the terminal WITHOUT hiding it: focus returns to the editor and the
+// panel stays open. This is what `escape` used to do before it was handed back
+// to zsh for vi normal mode; ctrl+shift+l closes the panel entirely, which is a
+// different thing.
+//
+// TRADE-OFF: .zshrc binds ^l to autosuggest-accept in insert mode, and a VS Code
+// binding scoped to terminalFocus intercepts the key before zsh sees it. So
+// inside VS Code's panel ^l focuses the editor and ^y accepts the suggestion;
+// in kitty, ^l still accepts. Delete this entry to give ^l back to zsh here too.
+{
+  "key": "ctrl+l",
+  "command": "workbench.action.focusActiveEditorGroup",
+  "when": "terminalFocus"
+},
 {
   "key": "ctrl+l",
   "command": "-workbench.action.browser.focusUrlInput",
@@ -1104,10 +1193,9 @@
   "command": "-workbench.action.browser.showHistory",
   "when": "activeEditor == 'workbench.editor.browser' && browserStorageScope != 'ephemeral'"
 },
-{
-  "key": "ctrl+shift+j",
-  "command": "workbench.action.positionPanelBottom"
-},
+// DELETED: ctrl+shift+j -> positionPanelBottom. The key is now terminal
+// resize, and moving the panel to the bottom is a one-time layout choice that
+// is already made -- not worth a permanent key.
 {
   "key": "ctrl+l",
   "command": "-extension.vim_navigateCtrlL",
