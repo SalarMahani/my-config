@@ -107,6 +107,13 @@
     "before": ["<leader>", "l"],
     "commands": ["workbench.action.terminal.focus"]
     },
+
+    // <leader>l = the integrated panel, <leader>t = a real kitty window at the
+    // workspace root. Which binary that opens is `terminal.external.linuxExec`.
+    {
+    "before": ["<leader>", "t"],
+    "commands": ["workbench.action.terminal.openNativeConsole"]
+    },
   ],
 
   //---------- Vim Visual Mode
@@ -159,6 +166,24 @@
   "editor.fontFamily": "'Source Code Pro', 'JetBrains Mono', 'Courier New', monospace",
   "editor.fontLigatures": true,
   "terminal.integrated.fontSize": 12,
+
+  //---------- Terminal
+  // The integrated terminal keeps VS Code's own appearance -- no font, color or
+  // ligature overrides. Only the shell is pinned, and it is pinned because zsh
+  // is where vi mode lives (.zshrc: `bindkey -v`); inheriting $SHELL would fall
+  // back to bash on a machine where `chsh` has not been run.
+  "terminal.integrated.defaultProfile.linux": "zsh",
+
+  // ── The real kitty, in its own window ───────────────────────────────────
+  // Ctrl+Shift+C ("Open New External Terminal"), <leader>t in normal mode, and
+  // the Explorer's right-click menu all launch this. VS Code spawns it with cwd
+  // set to the folder in question and passes no arguments, so kitty opens in the
+  // right directory by inheritance -- no `-d` needed.
+  "terminal.external.linuxExec": "kitty",
+  // "both" keeps the integrated entry in these context menus and adds an
+  // external one next to it, rather than replacing it.
+  "terminal.explorerKind": "both",
+  "terminal.sourceControlRepositoriesKind": "both",
 
   //---------- Advanced System
   "keyboard.dispatch": "keyCode",
