@@ -48,20 +48,33 @@ input "type:touchpad" {
 
 ### 3. Outputs and workspaces ##############################################
 
-# Laptop (eDP-1) on the LEFT, external monitor (HDMI-A-1, LG W2286) on the
-# RIGHT. Move the mouse right to reach the right monitor.
+# Laptop (eDP-1) on the LEFT, external monitor on the RIGHT. Move the mouse
+# right to reach the right monitor.
 #
-# NOTE: this used to say DP-1, which is not a real output on this machine, so
-# sway silently ignored both lines. The correct name comes from
-# `swaymsg -t get_outputs`. No resolution is forced: HDMI-A-1's native mode is
-# 1680x1050 and looks better than the 1024x768 that was configured here before.
+# The external monitor does NOT have a stable connector name. It has come up as
+# DP-1 and as HDMI-A-1 on this machine depending on which port and adapter it is
+# plugged into, and every time it changed, the single hardcoded name here went
+# dead and sway silently ignored the line -- there is no error for naming an
+# output that is not attached. So name BOTH. A line for a connector that is not
+# plugged in does nothing, which is exactly why listing them both is safe.
+#
+# `swaymsg -t get_outputs` prints the name in use right now. Its make/model are
+# reported as "Unknown", so the `<make> <model> <serial>` identifier that sway
+# also accepts is not an option here; connector names are all we have.
+#
+# No resolution is forced: whatever the monitor reports as native beats guessing.
 output eDP-1 position 0 0
-output HDMI-A-1 position 1366 0
+output DP-1      position 1366 0
+output HDMI-A-1  position 1366 0
 
 # Pin workspace numbers to outputs by parity: ODD = laptop (eDP-1), EVEN =
-# external (HDMI-A-1). The point is that a number tells you which screen it is
-# on before you press it, so $mod+3 always means "the laptop's second desktop"
-# no matter where you are looking right now.
+# external. The point is that a number tells you which screen it is on before
+# you press it, so $mod+3 always means "the laptop's second desktop" no matter
+# where you are looking right now.
+#
+# Each even line lists BOTH names the external monitor can appear under, for the
+# reason given above. `workspace N output a b` means "a, or b if a is not
+# attached", so this is one pin, not two competing ones.
 #
 # This also drives ws-cycle.py: when $mod+period appends a workspace it skips
 # numbers pinned to the OTHER output, so the laptop grows 1 -> 3 -> 5 -> 7 and
@@ -82,11 +95,11 @@ workspace 5 output eDP-1
 workspace 7 output eDP-1
 workspace 9 output eDP-1
 
-workspace 2 output HDMI-A-1
-workspace 4 output HDMI-A-1
-workspace 6 output HDMI-A-1
-workspace 8 output HDMI-A-1
-workspace 10 output HDMI-A-1
+workspace 2 output DP-1 HDMI-A-1
+workspace 4 output DP-1 HDMI-A-1
+workspace 6 output DP-1 HDMI-A-1
+workspace 8 output DP-1 HDMI-A-1
+workspace 10 output DP-1 HDMI-A-1
 
 
 ### 4. Appearance ##########################################################

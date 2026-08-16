@@ -56,8 +56,11 @@ outer-margin=34,10,10,10
 layer=top
 
 # `output` is deliberately unset: with two monitors, notifications follow the
-# focused output rather than being pinned to one screen. Set it to eDP-1 or
-# HDMI-A-1 to pin them.
+# focused output rather than being pinned to one screen. Set it to a connector
+# name to pin them -- but note the external monitor's name is not stable here
+# (it appears as DP-1 or HDMI-A-1 depending on the port), and mako takes only
+# one, so eDP-1 is the only safe thing to pin to. Check with
+# `swaymsg -t get_outputs`.
 
 max-visible=5
 default-timeout=5000

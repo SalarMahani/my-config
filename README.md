@@ -296,8 +296,10 @@ and the four plugins — it is not a hang, and it happens only once.
 
 Two things are specific to this laptop and will need editing:
 
-**Monitor names and positions** — sway config §3 names `eDP-1` and `HDMI-A-1`.
-Get the real names with:
+**Monitor names and positions** — sway config §3 names `eDP-1` for the laptop
+panel, and both `DP-1` and `HDMI-A-1` for the external (its connector name varies
+with the port and adapter used; sway ignores lines naming an output that is not
+attached, so listing both is safe). Get the real names with:
 
 ```bash
 swaymsg -t get_outputs

@@ -77,6 +77,20 @@ def emptiness_by_workspace() -> dict:
     return empty
 
 
+def attached_outputs() -> set:
+    """Names of the outputs that are plugged in and enabled right now.
+
+    A `workspace N output <name>` line naming a monitor that is not attached
+    reserves nothing in practice, and `number_for_new_workspace` needs to be
+    able to tell the difference.
+    """
+    return {
+        out["name"]
+        for out in json.loads(sway("-t", "get_outputs"))
+        if out.get("active", True)
+    }
+
+
 def pinned_numbers() -> dict:
     """Map workspace number -> set of outputs it is pinned to.
 
@@ -117,7 +131,9 @@ def pin_stride(output: str, pins: dict):
     return stride, mine[0] % stride
 
 
-def number_for_new_workspace(used: set, output: str, pins: dict, after: int) -> int:
+def number_for_new_workspace(
+    used: set, output: str, pins: dict, after: int, attached: set
+) -> int:
     """Pick the number for a workspace appended to the end of `output`'s strip.
 
     It must sort AFTER the current last workspace, so we look for the first free
@@ -128,12 +144,30 @@ def number_for_new_workspace(used: set, output: str, pins: dict, after: int) -> 
     pattern = pin_stride(output, pins)
     last_pinned = max(pins, default=0)
 
+    # Is the focused output named by any pin at all? If it is not, the parity
+    # scheme has nothing to say about it. That happens when the monitor comes up
+    # under a connector name the config does not list, and it used to poison
+    # this search: EVERY pinned number looked like it belonged to somebody else,
+    # so appending from workspace 2 on an unlisted external skipped the whole
+    # 1..10 range and landed on 11.
+    #
+    # A number pinned only to monitors that are NOT attached reserves nothing
+    # real, so for an output the pins never heard of, let those numbers through.
+    # Numbers pinned to a monitor that IS attached still block us, which is what
+    # keeps the laptop's odd numbers from being handed to the external.
+    unpinned_output = not any(
+        output in outs or "*" in outs for outs in pins.values()
+    )
+
     def usable(n: int) -> bool:
         if n in used:
             return False
-        # A number pinned to another output would yank us to that monitor.
-        if n in pins and output not in pins[n] and "*" not in pins[n]:
-            return False
+        owners = pins.get(n, set())
+        if owners and output not in owners and "*" not in owners:
+            # A number pinned to another output would yank us to that monitor,
+            # unless that monitor is absent and we are an unpinned output.
+            if not (unpinned_output and attached.isdisjoint(owners)):
+                return False
         # Past the pinned range, keep the pins' own pattern going.
         if pattern and n > last_pinned and n % pattern[0] != pattern[1]:
             return False
@@ -202,7 +236,11 @@ def main() -> None:
 
     used = {w["num"] for w in workspaces if w["num"] >= 0}
     fresh = number_for_new_workspace(
-        used, output, pinned_numbers(), after=max(current["num"], 0)
+        used,
+        output,
+        pinned_numbers(),
+        after=max(current["num"], 0),
+        attached=attached_outputs(),
     )
     go({"num": fresh, "name": str(fresh)}, take)
 

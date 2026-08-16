@@ -101,7 +101,7 @@ root
 │   │           ├── view: firefox
 │   │           └── view: kitty
 │   └── workspace 3
-└── output HDMI-A-1  (your external LG monitor — even workspaces)
+└── output DP-1  (your external monitor — even workspaces)
     ├── workspace 2
     └── workspace 4
 ```
@@ -463,20 +463,28 @@ identifier from `swaymsg -t get_inputs`.
 
 ```
 output eDP-1 position 0 0
-output HDMI-A-1 position 1366 0
+output DP-1      position 1366 0
+output HDMI-A-1  position 1366 0
 
-workspace 1 output eDP-1     workspace 2  output HDMI-A-1
-workspace 3 output eDP-1     workspace 4  output HDMI-A-1
-workspace 5 output eDP-1     workspace 6  output HDMI-A-1
-workspace 7 output eDP-1     workspace 8  output HDMI-A-1
-workspace 9 output eDP-1     workspace 10 output HDMI-A-1
+workspace 1 output eDP-1     workspace 2  output DP-1 HDMI-A-1
+workspace 3 output eDP-1     workspace 4  output DP-1 HDMI-A-1
+workspace 5 output eDP-1     workspace 6  output DP-1 HDMI-A-1
+workspace 7 output eDP-1     workspace 8  output DP-1 HDMI-A-1
+workspace 9 output eDP-1     workspace 10 output DP-1 HDMI-A-1
 
 output * bg /home/albos/Pictures/wallpapers/02.png fill
 ```
 
 **`eDP-1`** is your laptop panel: BOE, 1366×768 @ 60 Hz.
-**`HDMI-A-1`** is the external LG W2286, 1680×1050 @ 59.9 Hz, placed to the
-right of the laptop at x=1366.
+
+**The external monitor has no stable connector name.** It has come up as both
+`DP-1` and `HDMI-A-1` on this machine, depending on which port and adapter it is
+plugged into, so the config names **both**. Sway ignores a line naming a
+connector that is not attached — which is precisely what makes listing both
+safe, and what made naming only one of them fail silently, twice. Check which
+one is live with `swaymsg -t get_outputs`. It sits to the right of the laptop at
+x=1366. Its make/model report as `Unknown`, so sway's stable
+`<make> <model> <serial>` output identifier is not usable here.
 
 The ten `workspace N output` lines implement the **odd = laptop, even =
 external** scheme. They are explained in full in
@@ -484,8 +492,8 @@ external** scheme. They are explained in full in
 them, because `ws-cycle.py` reads these lines and derives its behaviour from
 them.
 
-These lines previously referred to a non-existent `DP-1` and were silently
-ignored; corrected 2026-08-15. See
+These lines have been wrong twice, in both directions — `DP-1` when the monitor
+was on HDMI, then `HDMI-A-1` when it came back on DP. Naming both ended it. See
 [Known Issues](#10-known-issues-in-your-config) for the full story.
 
 `output * bg <file> fill` applies the wallpaper to every output. Scaling modes
@@ -569,7 +577,7 @@ right, and that grows off the right-hand end when you run out.
                        ←── $mod+,              $mod+. ──→
 
 laptop    (eDP-1)     [ 1 ] ─── [ 3 ] ─── [ 5 ] ─── (appends here)
-external  (HDMI-A-1)  [ 2 ] ─── [ 4 ] ─── [ 6 ] ─── (appends here)
+external  (DP-1)      [ 2 ] ─── [ 4 ] ─── [ 6 ] ─── (appends here)
 ```
 
 - **`$mod+.`** — one step right. At the **last** workspace there is nowhere to
@@ -599,10 +607,10 @@ The ten `workspace N output` lines in your config (§5.3) pin **odd numbers to t
 laptop and even numbers to the external monitor**:
 
 ```
-workspace 1 output eDP-1     workspace 2  output HDMI-A-1
-workspace 3 output eDP-1     workspace 4  output HDMI-A-1
+workspace 1 output eDP-1     workspace 2  output DP-1 HDMI-A-1
+workspace 3 output eDP-1     workspace 4  output DP-1 HDMI-A-1
 ...                          ...
-workspace 9 output eDP-1     workspace 10 output HDMI-A-1
+workspace 9 output eDP-1     workspace 10 output DP-1 HDMI-A-1
 ```
 
 The payoff is that **a number now tells you which screen it is on before you
@@ -667,6 +675,27 @@ Two rules do the real work:
 That inference is general. Pin three monitors as `1,4,7 / 2,5,8 / 3,6,9` and it
 extends stride 3 instead. Use contiguous ranges like `1-5 / 6-10` and it
 correctly detects no pattern worth extending and falls back to first-free.
+
+3. **A pin naming an absent monitor does not reserve anything — for an output
+   the pins have never heard of.** This is the fix for the bug in
+   [§10, Issue 1](#10-known-issues-in-your-config), and the wording is fussy
+   because both halves matter.
+
+   When the focused output is named in *no* pin — because the monitor came up
+   under a connector name the config does not list — the parity scheme has
+   nothing to say about it, and rules 1 and 2 turn hostile. Every pinned number
+   looks like it belongs to someone else, so the search skips the entire pinned
+   range; `pin_stride` finds no pattern to extend, because none of the pins are
+   ours. Result: from workspace 2, `$mod+.` appended workspace **11**.
+
+   So for an output like that, numbers pinned *only* to monitors that are not
+   currently attached are treated as free. Numbers pinned to a monitor that **is**
+   attached still block, which is what stops an unknown external from being
+   handed the laptop's odd numbers — the laptop's own pins still fence them off.
+
+   The condition is deliberately narrow. On any output the pins *do* name — which
+   is the normal case once the config is right — nothing changes, and evens stay
+   reserved for the external even while it is unplugged.
 
 Two tunables at the top of the file:
 
@@ -936,7 +965,7 @@ is why volume and play/pause work without unlocking.
 
 ## 10. Known Issues in Your Config
 
-### ✅ Issue 1: `DP-1` did not exist — FIXED 2026-08-15
+### ✅ Issue 1: the external monitor's connector name — FIXED 2026-08-16
 
 The config used to say:
 
@@ -967,25 +996,51 @@ The `DP-1` name was a leftover from an earlier VGA-adapter setup. The comment
 block above it, and the since-deleted `set-outputs.sh`, both used `HDMI-A-1`
 correctly.
 
-**Now fixed to:**
+The `DP-1` name was assumed to be a leftover from an earlier VGA-adapter setup,
+and on 2026-08-15 every mention of it was rewritten to `HDMI-A-1`.
+
+**That fix was wrong, and broke again on 2026-08-16.** The monitor came back up
+as `DP-1`:
+
+```
+$ swaymsg -t get_outputs
+DP-1   | Unknown | Unknown | Unknown | 1024x768 @ 60 Hz | position 1366,0
+eDP-1  | BOE     | 0x0672  | Unknown | 1366x768  @ 60 Hz | position 0,0
+```
+
+So `HDMI-A-1` was now the dead name, and all five even `workspace N output`
+lines pointed at a monitor that was not there. The visible symptom was in
+`ws-cycle.py`: sitting on workspace 2 with the laptop holding 1/3/5, `$mod+.`
+created workspace **11** instead of 4. Every even number was pinned to an output
+the focused monitor was not, so the search skipped 2–10 entirely, found no
+pattern to extend (the focused output `DP-1` was named in no pin at all), and
+took the first free integer.
+
+**The real bug was never which name is correct — it was hardcoding one name.**
+The connector depends on which port and adapter the monitor is plugged into, and
+sway reports no error when a line names an absent output. So the config now names
+both, which is safe precisely because the dead one is ignored:
 
 ```
 output eDP-1 position 0 0
-output HDMI-A-1 position 1366 0
+output DP-1      position 1366 0
+output HDMI-A-1  position 1366 0
 
-workspace 1 output eDP-1
-workspace 2 output HDMI-A-1
+workspace 2 output DP-1 HDMI-A-1        # "DP-1, or HDMI-A-1 if that is absent"
 ```
 
-The resolution override was deliberately dropped rather than carried across —
-re-adding `1024x768` would have been a real downgrade from the native mode you
-have actually been using. Verified after reload: workspace 2 now opens on
-`HDMI-A-1`.
+`workspace N output a b` is one pin with a fallback, not two competing pins, and
+`ws-cycle.py` already parsed the multi-output form. The `<make> <model> <serial>`
+identifier sway also accepts would be the properly stable answer, but this
+monitor reports all three as `Unknown`.
 
-> **Superseded later the same day.** Those two `workspace ... output` lines have
-> since been replaced by the ten-line odd/even scheme in
-> [§6.3](#63-the-oddeven-scheme). The `output` lines above are still current; only
-> the workspace pinning changed.
+`ws-cycle.py` was hardened at the same time so an *unlisted* connector can never
+reproduce this. See [§6.4](#64-ws-cyclepy).
+
+The resolution override was deliberately dropped rather than carried across, and
+stays dropped: whatever the monitor reports as native beats guessing. Verified
+after reload — from workspace 2 on `DP-1`, `$mod+.` now creates workspace 4 on
+`DP-1`.
 
 Workspace assignments apply at *creation* time, so pre-existing workspaces keep
 their placement — that is normal, and matches sway's default behavior anyway. It
@@ -1073,8 +1128,12 @@ this machine; they would need editing on a differently-named account.
 
 1. **Test it live first** — every config line works as a `swaymsg` command:
    ```bash
-   swaymsg output HDMI-A-1 position 1366 0
+   swaymsg output DP-1 position 1366 0
    ```
+   Sway reports success for an output that is not attached, so confirm the name
+   against `swaymsg -t get_outputs` first — a typo'd or stale connector name
+   fails silently, which is how [§10, Issue 1](#10-known-issues-in-your-config)
+   went unnoticed twice.
 2. **Write it into the config** once it works.
 3. **Validate before reloading** — this catches syntax errors without breaking
    your session:
@@ -1182,7 +1241,7 @@ rpm -q xdg-desktop-portal-wlr
 | **compositor** | The program that owns the screen — here, sway itself |
 | **wlroots** | The library sway is built on |
 | **XWayland** | Compatibility layer running X11 apps under Wayland |
-| **output** | A monitor (`eDP-1` = laptop panel, `HDMI-A-1` = external) |
+| **output** | A monitor (`eDP-1` = laptop panel, `DP-1`/`HDMI-A-1` = external) |
 | **view** | An application window |
 | **container** | An invisible box holding windows in a layout |
 | **scratchpad** | A hidden workspace for parking windows |
@@ -1212,8 +1271,10 @@ INSPECT     swaymsg -t get_tree -p / get_outputs -p / get_inputs -p
 TEST LIVE   swaymsg <any config line>    (prefix with `--` if it takes --flags)
 DOCS        man 5 sway
 
-MONITORS    eDP-1      1366x768   laptop panel, position 0,0    → ODD  workspaces
-            HDMI-A-1   1680x1050  LG W2286,    position 1366,0 → EVEN workspaces
+MONITORS    eDP-1      laptop panel, position 0,0     → ODD  workspaces
+            DP-1 or HDMI-A-1  external, position 1366,0 → EVEN workspaces
+            (the external's connector name varies — config names both;
+             check which is live with `swaymsg -t get_outputs`)
 
 WORKSPACES  Alt+.  next on this monitor, or append a new one at the end
             Alt+,  previous on this monitor, stops at the first
