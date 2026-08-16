@@ -29,8 +29,19 @@
     "when": "accessibilityHelpIsShown && accessibleViewHasUnassignedKeybindings"
   },
   {
-    "key": "alt+k",
+    // Was alt+k -- sway binds $mod+k to focus-up. ctrl+shift+up also carries
+    // terminal resizePaneUp, but that one is `when: terminalFocus` and this one
+    // is `when: editorTextFocus`, so the two contexts never overlap.
+    "key": "ctrl+shift+up",
     "command": "editor.action.moveLinesUpAction",
+    "when": "editorTextFocus && !editorReadonly"
+  },
+  {
+    // The missing counterpart. VS Code's alt+down default was deleted below but
+    // never re-bound, so moving a line DOWN had no key at all -- alt+j would not
+    // have worked either, since sway binds $mod+Down and $mod+j to focus-down.
+    "key": "ctrl+shift+down",
+    "command": "editor.action.moveLinesDownAction",
     "when": "editorTextFocus && !editorReadonly"
   },
   {
@@ -146,7 +157,11 @@
     "command": "-auto-close-tag.closeTag"
   },
   {
-    "key": "alt+.",
+    // Was alt+. -- dead, because sway binds $mod+period to ws-cycle.py. Every
+    // alt+ combo below that sway claims has been moved onto ctrl+ for the same
+    // reason. Mirrors `.` = next editor in vim normal mode, so it now works in
+    // insert mode too.
+    "key": "ctrl+.",
     "command": "workbench.action.nextEditor"
   },
   {
@@ -154,7 +169,9 @@
     "command": "-workbench.action.nextEditor"
   },
   {
-    "key": "alt+,",
+    // Was alt+, -- sway binds $mod+comma. Mirrors `,` = previous editor in vim
+    // normal mode.
+    "key": "ctrl+,",
     "command": "workbench.action.previousEditor"
   },
   {
@@ -162,7 +179,9 @@
     "command": "-workbench.action.previousEditor"
   },
   {
-    "key": "ctrl+p",
+    // Moved off ctrl+p so zsh gets ^p back (.zshrc: history-search-backward).
+    // ctrl+shift+, mirrors `,` = previous editor in vim normal mode.
+    "key": "ctrl+shift+,",
     "command": "workbench.action.terminal.focusPrevious",
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
@@ -172,7 +191,9 @@
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
   {
-    "key": "ctrl+n",
+    // Moved off ctrl+n so zsh gets ^n back (.zshrc: history-search-forward).
+    // ctrl+shift+. mirrors `.` = next editor in vim normal mode.
+    "key": "ctrl+shift+.",
     "command": "workbench.action.terminal.focusNext",
     "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
   },
@@ -261,30 +282,47 @@
     "when": "browserFindWidgetFocused && activeEditor == 'workbench.editor.browser'"
   },
   {
-    "key": "alt+enter",
+    // Was alt+enter -- sway binds $mod+Return to launch kitty.
+    "key": "ctrl+enter",
     "command": "workbench.action.unifiedQuickAccess"
   },
   {
+    // Scoped to !terminalFocus: ^I *is* Tab, so an unrestricted binding killed
+    // the terminal instead of completing a path. Killing it from the editor --
+    // the usual direction, and what vim-normal-mode `I` already does -- still works.
     "key": "ctrl+i",
-    "command": "workbench.action.terminal.kill"
+    "command": "workbench.action.terminal.kill",
+    "when": "!terminalFocus"
   },
   {
-    "key": "alt+.",
+    // Panel-scoped siblings of the two above. These must stay LATER in the file
+    // than the plain nextEditor/previousEditor entries: VS Code resolves a key
+    // collision by taking the last rule whose `when` matches, so this ordering
+    // is what makes ctrl+. mean "next panel view" while the panel has focus and
+    // "next editor" everywhere else.
+    "key": "ctrl+.",
     "command": "workbench.action.nextPanelView",
     "when": "panelFocus"
   },
   {
-    "key": "alt+,",
+    "key": "ctrl+,",
     "command": "workbench.action.previousPanelView",
     "when": "panelFocus"
   },
   {
-    "key": "ctrl+k",
-    "command": "workbench.action.terminal.resizePaneUp"
+    // Moved off ctrl+k / ctrl+j, which had NO `when` clause at all and so fired
+    // everywhere -- including mid-typing in the terminal, where ^J is a literal
+    // newline. Unlike resizePaneLeft/Right these two have no Linux default to
+    // fall back on (VS Code ships them mac-only), so they are re-homed here
+    // rather than deleted, completing the ctrl+shift+<arrow> family.
+    "key": "ctrl+shift+up",
+    "command": "workbench.action.terminal.resizePaneUp",
+    "when": "terminalFocus"
   },
   {
-    "key": "ctrl+j",
-    "command": "workbench.action.terminal.resizePaneDown"
+    "key": "ctrl+shift+down",
+    "command": "workbench.action.terminal.resizePaneDown",
+    "when": "terminalFocus"
   },
   {
     "key": "ctrl+j",
@@ -295,26 +333,12 @@
     "command": "-extension.vim_ctrl+j",
     "when": "editorTextFocus && vim.active && vim.use<C-j> && !inDebugRepl"
   },
-  {
-    "key": "ctrl+l",
-    "command": "workbench.action.terminal.resizePaneRight",
-    "when": "panelFocus"
-  },
-  {
-    "key": "ctrl+shift+right",
-    "command": "-workbench.action.terminal.resizePaneRight",
-    "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
-  },
-  {
-    "key": "ctrl+h",
-    "command": "workbench.action.terminal.resizePaneLeft",
-    "when": "terminalFocus"
-  },
-  {
-    "key": "ctrl+shift+left",
-    "command": "-workbench.action.terminal.resizePaneLeft",
-    "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
-  },
+    // resizePaneLeft/Right used to sit on ctrl+h / ctrl+l, with VS Code's own
+    // ctrl+shift+left / ctrl+shift+right defaults deleted to make room. Both
+    // collided with the shell: ^H is backspace and ^L is clear-screen, so
+    // neither ever reached zsh. Rather than invent replacement keys, the two
+    // bindings and the two `-` removals are simply gone, which lets VS Code's
+    // stock ctrl+shift+left / ctrl+shift+right come back on their own.
   {
     "key": "shift+enter",
     "command": "workbench.action.quickOpen"
@@ -324,7 +348,10 @@
     "command": "-workbench.action.quickOpen"
   },
   {
-    "key": "alt+a",
+    // Was alt+a -- sway binds $mod+a. Keeps the 'a' mnemonic. Note VS Code's own
+    // default for this is ctrl+, which is now next/previous editor, and the
+    // entry just below already removes it.
+    "key": "ctrl+shift+a",
     "command": "workbench.action.openSettings"
   },
   {
@@ -351,10 +378,9 @@
     "command": "-toggleSearchWholeWord",
     "when": "searchViewletFocus"
   },
-  {
-    "key": "shift+alt+h",
-    "command": "workbench.action.toggleActivityBarVisibility"
-  },
+  // DELETED: shift+alt+h -> toggleActivityBarVisibility. Dead to sway
+  // ($mod+Shift+h = move-left) and pointless anyway, since settings.json sets
+  // "workbench.activityBar.location": "hidden" permanently.
   {
     "key": "ctrl+k ctrl+i",
     "command": "-editor.action.showHover",
@@ -439,9 +465,13 @@
     "command": "-workbench.action.focusEighthEditorGroup"
   },
   {
+  // terminalFocus deliberately REMOVED from this `when`. Escape has to reach
+  // the shell: .zshrc runs `bindkey -v`, and Escape is the only way into vicmd,
+  // so binding it here made vi normal mode unreachable in the panel.
+  // To leave the terminal, ctrl+shift+l toggles the panel (see below).
   "key": "escape",
   "command": "workbench.action.focusActiveEditorGroup",
-  "when":"sideBarFocus || terminalFocus"
+  "when":"sideBarFocus"
   },
   {
     "key": "ctrl+h",
@@ -478,11 +508,9 @@
     "command": "-selectNextSuggestion",
     "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus || suggestWidgetVisible && textInputFocus && !suggestWidgetHasFocusedSuggestion"
   },
-  {
-    "key": "alt+k",
-    "command": "selectPrevSuggestion",
-    "when": "suggestWidgetVisible && textInputFocus"
-  },
+  // DELETED: alt+k -> selectPrevSuggestion. Dead to sway ($mod+k = focus up),
+  // and redundant: ctrl+p already does selectPrevSuggestion on the same
+  // `suggestWidgetVisible` condition, with ctrl+n as its counterpart.
   {
     "key": "ctrl+up",
     "command": "-selectPrevSuggestion",
@@ -498,8 +526,12 @@
     "command": "-workbench.action.splitEditor"
   },
   {
-    "key": "ctrl+,",
-    "command": "workbench.action.moveEditorLeftInGroup"
+    // Displaced from ctrl+, so that key could take previousEditor. Shares
+    // ctrl+shift+, with terminal.focusPrevious, which is `when: terminalFocus`;
+    // scoping this to editorFocus keeps the two from ever both matching.
+    "key": "ctrl+shift+,",
+    "command": "workbench.action.moveEditorLeftInGroup",
+    "when": "editorFocus"
   },
   {
     "key": "ctrl+shift+pageup",
@@ -511,8 +543,11 @@
     "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/"
   },
   {
-    "key": "ctrl+.",
-    "command": "workbench.action.moveEditorRightInGroup"
+    // Displaced from ctrl+. so that key could take nextEditor. Same
+    // editorFocus / terminalFocus split as its ctrl+shift+, sibling above.
+    "key": "ctrl+shift+.",
+    "command": "workbench.action.moveEditorRightInGroup",
+    "when": "editorFocus"
   },
   {
     "key": "ctrl+shift+pagedown",
@@ -560,11 +595,8 @@
     "command": "explorer.newFolder",
     "when": "filesExplorerFocus && !inputFocus"
   },
-  {
-    "key": "alt+e",
-    "command": "editor.action.quickFix",
-    "when": "editorHasCodeActionsProvider && textInputFocus && !editorReadonly"
-  },
+  // DELETED: alt+e -> quickFix. Dead to sway ($mod+e), and redundant: settings.json
+  // already binds <leader>e to editor.action.quickFix in vim normal mode.
   {
     "key": "ctrl+.",
     "command": "-editor.action.quickFix",
@@ -685,10 +717,10 @@
   "command": "selectPrevCodeAction",
   "when": "codeActionMenuVisible"
 },
-{
-  "key": "alt+a",
-  "command": "keybindings.editor.recordSearchKeys"
-},
+// DELETED: alt+a -> keybindings.editor.recordSearchKeys. Dead to sway ($mod+a),
+// and a second, conflicting use of alt+a -- the other one opened Settings, which
+// is now on ctrl+shift+a. This one only matters inside the keybindings editor's
+// search box, where VS Code's own default already covers it.
 {
   "key": "ctrl+n",
   "command": "quickInput.next",
@@ -850,7 +882,12 @@
   },
 
  {
-    "key": "ctrl+.",
+    // Displaced from ctrl+. -- it sat later in this file than the new
+    // nextEditor binding, so it would have won the collision and made ctrl+.
+    // hide both panes instead of switching tabs whenever the panel and sidebar
+    // were open. Moved next to its siblings: ctrl+shift+h toggles the sidebar,
+    // ctrl+shift+l the panel, and ctrl+shift+k now toggles both at once.
+    "key": "ctrl+shift+k",
     "command": "runCommands",
     "args": {
       "commands": [
@@ -903,11 +940,9 @@
   "when": "codeActionMenuVisible"
 },
 ///
-{
-  "key": "alt+l",
-  "command": "workbench.action.terminal.focus",
-  "when": "!terminalFocus"
-},
+// DELETED: alt+l -> terminal.focus. Dead to sway ($mod+l = focus right), and
+// redundant: settings.json binds <leader>l to the same command in vim normal
+// mode, and ctrl+shift+l toggles the panel from anywhere.
 {
   "key": "ctrl+down",
   "command": "-workbench.action.terminal.focus",
