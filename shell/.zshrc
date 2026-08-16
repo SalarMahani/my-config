@@ -88,14 +88,34 @@ bindkey -v                   # vi keybindings on the command line
 export KEYTIMEOUT=1          # 10ms before Escape is treated as mode-switch
 
 # Block cursor in normal mode, beam in insert mode.
-function zle-keymap-select {
-  if [[ $KEYMAP == vicmd ]]; then
-    echo -ne '\e[1 q'  # block cursor = normal mode
-  else
-    echo -ne '\e[5 q'  # beam cursor = insert mode
-  fi
+#
+# Installed with add-zle-hook-widget rather than `zle -N zle-keymap-select`,
+# because powerlevel10k (loaded above) puts its own widgets on these same two
+# hooks to drive the ❯/❮ prompt char. `zle -N` REPLACES a widget; the hook
+# helper chains onto whatever is already registered, so both survive.
+autoload -Uz add-zle-hook-widget
+
+function _vi_cursor_shape {
+  case $KEYMAP in
+    vicmd) printf '\e[1 q' ;;   # block = normal mode
+    *)     printf '\e[5 q' ;;   # beam  = insert mode
+  esac
 }
-zle -N zle-keymap-select
+add-zle-hook-widget keymap-select _vi_cursor_shape
+
+# keymap-select alone is not enough: it only fires when the keymap CHANGES.
+# Press Escape (block) then Enter, and zsh starts the next line back in viins
+# without a keymap-change event -- so the prompt kept showing a block cursor
+# while you were actually in insert mode. Every new line begins in viins, so
+# reset the shape explicitly at line-init.
+function _vi_cursor_beam { printf '\e[5 q' }
+add-zle-hook-widget line-init _vi_cursor_beam
+
+# Commands inherit whatever shape the line editor left behind, so a beam would
+# leak into vim, less and man. Hand them a block before they start.
+autoload -Uz add-zsh-hook
+function _vi_cursor_block { printf '\e[1 q' }
+add-zsh-hook preexec _vi_cursor_block
 
 # Prefix search: type a few characters, then ^p/^n walks matching history.
 bindkey '^p' history-search-backward
@@ -112,6 +132,20 @@ bindkey -M viins '^[[3~' delete-char          # Delete key
 # instead of inserting the character. ^y is the conventional choice and
 # collides with nothing.
 bindkey -M viins '^y' autosuggest-accept
+
+# ...and on ^l as well. Deliberately scoped to viins ONLY: ^l is clear-screen by
+# default in both keymaps, and overriding it everywhere would cost you the
+# standard "clear the terminal" key. Bound here, insert mode accepts the
+# suggestion while NORMAL mode still clears the screen — so clearing is Escape
+# then ^l, and nothing is actually lost.
+#
+# Both bindings live here rather than in a terminal's own config, which is what
+# makes the behaviour identical in kitty and in VS Code's panel: they are two
+# different terminal emulators, but they run this same zsh. Nothing about this
+# is emulator-specific. Two things had to be true for ^l to reach zsh at all:
+# kitty does not bind it (verified), and VS Code's binding was removed — it used
+# to fire terminal.resizePaneRight and swallow the key.
+bindkey -M viins '^l' autosuggest-accept
 
 
 ### Aliases ################################################################
