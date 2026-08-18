@@ -193,25 +193,160 @@ visual_bell_duration 0
 
 ## 6. Built-in shortcuts worth knowing
 
-None of these are configured by you — they are kitty defaults, and they work
-right now.
+None of these are configured by you — they are kitty **defaults**, and they work
+right now. Everything below was read out of kitty 0.47.1's own default keymap on
+this machine rather than copied from upstream docs, so it matches the binary you
+actually have.
+
+The modifier is `kitty_mod`, which defaults to **`ctrl+shift`**. Every shortcut
+here starts with it unless stated otherwise. Rebinding it once moves the whole
+table:
+
+```conf
+kitty_mod ctrl+alt
+```
+
+### 6.1 Splits — kitty calls them *windows*
+
+A kitty "window" is a pane **inside** the terminal. It is not an OS window and
+has nothing to do with sway's windows, which is the most confusing thing in this
+section. Nothing here is visible to sway.
+
+| Keys | Action |
+|---|---|
+| `Ctrl+Shift+Enter` | New split |
+| `Ctrl+Shift+W` | **Close** the current split |
+| `Ctrl+Shift+]` / `[` | Focus next / previous split |
+| `Ctrl+Shift+1` … `Ctrl+Shift+0` | Jump straight to split 1–10 |
+| `Ctrl+Shift+F7` | Pick a split visually — overlays a letter on each |
+| `Ctrl+Shift+F8` | Swap this split with another |
+| `Ctrl+Shift+F` / `B` | Move the split forward / backward in the order |
+| ``Ctrl+Shift+` `` | Move the split to the first position |
+| `Ctrl+Shift+R` | Resize mode — `hjkl`/arrows resize, `Esc` leaves |
+| `Ctrl+Shift+N` | New **OS** window — a real one, which sway will tile |
+
+`Ctrl+Shift+W` closes one split; `Ctrl+Shift+Q` closes the whole **tab**. They
+are one key apart, neither asks for confirmation, and the second one takes every
+split in the tab with it.
+
+### 6.2 Tabs
+
+| Keys | Action |
+|---|---|
+| `Ctrl+Shift+T` | New tab |
+| `Ctrl+Shift+Q` | **Close** the tab and every split inside it |
+| `Ctrl+Shift+Right` / `Left` | Next / previous tab |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | The same two, without reaching for Shift |
+| `Ctrl+Shift+.` / `,` | Move this tab right / left along the bar |
+| `Ctrl+Shift+Alt+T` | Rename the tab |
+
+The tab bar only appears once a second tab exists, so a single tab looks like no
+tabs at all.
+
+### 6.3 Layouts — and how to actually split *in half*
+
+**There is no "split vertically" key**, because kitty does not work that way.
+A **layout** decides how splits are arranged, and `Ctrl+Shift+Enter` only adds
+one for the current layout to place.
+
+| Keys | Action |
+|---|---|
+| `Ctrl+Shift+L` | Cycle to the next layout |
+
+All seven ship enabled, and `Ctrl+Shift+L` walks them in exactly this order:
+
+| Layout | Arrangement |
+|---|---|
+| `fat` | **the one you start in** — main split on top, the rest in a row below |
+| `grid` | An even grid |
+| `horizontal` | All splits **side by side** |
+| `splits` | Arbitrary nesting — the only layout with directional control |
+| `stack` | One split at a time, full size |
+| `tall` | Main split on the **left**, the rest stacked to the right |
+| `vertical` | All splits **stacked top to bottom** |
+
+**The naming trap.** `horizontal` puts panes side by side, so the divider you see
+is *vertical*; `vertical` stacks them, so the divider is *horizontal*. The name
+describes how the windows run, not which way the line goes. So "split the
+terminal in half vertically", meaning two panes left and right, is the
+`horizontal` layout — two presses of `Ctrl+Shift+L` from the default `fat`.
+
+**For splits you aim yourself, there is no default binding at all.** The `splits`
+layout supports them, but only through `launch --location`, which ships unbound.
+For tmux-style splitting, add to `kitty.conf`:
+
+```conf
+enabled_layouts splits,stack
+
+map ctrl+shift+d launch --location=vsplit --cwd=current
+map ctrl+shift+m launch --location=hsplit --cwd=current
+```
+
+`vsplit` puts the new pane to the **right**, `hsplit` puts it **below** — the
+same trap as above, and confirmed in kitty's own source, where `vsplit` divides
+the available *width*. `d` and `m` are untouched by kitty's defaults, so neither
+shadows an existing binding. `--cwd=current` opens the new pane in the same
+directory, which is almost always what you want and is *not* the default.
+
+### 6.4 Scrollback and command output
+
+| Keys | Action |
+|---|---|
+| `Ctrl+Shift+H` | Open the scrollback in a pager — searchable, vim keys |
+| `Ctrl+Shift+/` | Search the scrollback |
+| `Ctrl+Shift+G` | Show the **last command's output** on its own |
+| `Ctrl+Shift+Z` / `X` | Jump to the previous / next **shell prompt** |
+| `Ctrl+Shift+Up` / `Down`, or `K` / `J` | Scroll a line |
+| `Ctrl+Shift+PageUp` / `PageDown` | Scroll a page |
+| `Ctrl+Shift+Home` / `End` | Scroll to top / bottom |
+
+`Ctrl+Shift+G` and `Ctrl+Shift+Z`/`X` rely on kitty's shell integration, which is
+on by default under zsh. They are the ones nobody discovers on their own: jumping
+by *prompt* rather than by line is how you find the start of a command that
+scrolled off, and `G` pulls one command's output out of a noisy screen.
+
+> Earlier versions of this guide listed `Ctrl+Shift+F` as "search scrollback".
+> That was wrong — `F` moves a split forward, and search is `Ctrl+Shift+/`.
+
+### 6.5 Everything else
 
 | Keys | Action |
 |---|---|
 | `Ctrl+Shift+C` / `V` | Copy / paste |
-| `Ctrl+Shift+F5` | Reload config |
+| `Shift+Insert` | Paste from the primary selection |
+| `Ctrl+Shift+O` | Pipe the selection to a program |
+| `Ctrl+Shift+E` | Open a URL on screen by typing its hint letter |
+| `Ctrl+Shift+P` then a key | Pick things off the screen — paths, lines, words, hashes, hyperlinks |
+| `Ctrl+Shift+A` then a key | Background opacity — up, down, full, default |
+| `Ctrl+Shift+U` | Unicode / emoji picker |
 | `Ctrl+Shift+equal` / `minus` | Font size up / down |
-| `Ctrl+Shift+Up` / `Down` | Scroll a line |
-| `Ctrl+Shift+H` | Open scrollback in a pager — searchable |
-| `Ctrl+Shift+F` | Search scrollback |
-| `Ctrl+Shift+Enter` | New kitty window (a split, inside kitty) |
-| `Ctrl+Shift+T` | New tab |
-| `Ctrl+Shift+E` | Open the URL under the cursor |
+| `Ctrl+Shift+Backspace` | Reset font size |
+| `Ctrl+Shift+Delete` | Reset the terminal — fixes a screen mangled by stray output |
+| `Ctrl+Shift+F5` | Reload `kitty.conf` |
+| `Ctrl+Shift+F2` | Open `kitty.conf` in your editor |
+| `Ctrl+Shift+F6` | Dump the fully-resolved config |
+| `Ctrl+Shift+F1` | Open kitty's own documentation |
+| `Ctrl+Shift+F3` | **Command palette** — searchable list of every action |
+| `Ctrl+Shift+F11` / `F10` | Fullscreen / maximize |
+| `Ctrl+Shift+Escape` | kitty shell — drive kitty by typing commands at it |
 
-⚠️ Kitty has its own windows and tabs, which **overlap conceptually with sway's
-tiling**. Using both gets confusing fast. Since sway already splits, tiles and
-tabs windows for you, it is usually better to let sway manage layout and use
-kitty as a single pane.
+The last two rows of chords (`P` and `A`) are two-key sequences; their second
+keys are listed in the command palette. `Ctrl+Shift+F3` is the one worth
+memorising, because it shows every action *with its current key* and saves you
+coming back to this table.
+
+### 6.6 Kitty's splits vs sway's tiling
+
+⚠️ Kitty's windows and tabs **overlap conceptually with sway's tiling**, and
+running both layers of tiling at once gets confusing fast — `Ctrl+Shift+Enter`
+and `Alt+Return` produce visually similar results by completely different means.
+
+Since sway already splits, tiles and tabs for you, the usual advice is to let
+sway own the layout and keep kitty as a single pane. The case for using kitty's
+own splits anyway is that they are **per-terminal**: they follow that kitty
+window around workspaces and monitors as one unit, survive `Alt+Shift+A` moves as
+one unit, and a kitty split can be resized without disturbing sway's tree. Pick
+one habit per task rather than mixing them inside a single window.
 
 ---
 
