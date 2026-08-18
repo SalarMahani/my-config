@@ -24,7 +24,7 @@ window#waybar {
     color: #1e1e2e;
 }
 
-#cpu, #memory, #network, #bluetooth, #pulseaudio, #battery, #tray, #clock {
+#cpu, #memory, #network, #bluetooth, #pulseaudio, #battery, #power-profiles-daemon, #language, #tray, #clock {
     padding: 0 8px;
     color: #cdd6f4;
 }
@@ -35,4 +35,31 @@ window#waybar {
 
 #battery.critical {
     color: #f38ba8;
+}
+
+/* Power profile: colour tells you the mode at a glance */
+#power-profiles-daemon.performance {
+    color: #f38ba8;
+}
+
+#power-profiles-daemon.balanced {
+    color: #89b4fa;
+}
+
+#power-profiles-daemon.power-saver {
+    color: #a6e3a1;
+}
+
+/* Without a width floor GTK collapses this label to an ellipsis */
+#language {
+    min-width: 40px;
+}
+
+/* Sway mode indicator. Only visible outside the default mode, so it doubles as
+   the reminder that the keyboard is currently modal. */
+#mode {
+    padding: 0 10px;
+    background-color: #f9e2af;
+    color: #1e1e2e;
+    min-width: 40px;
 }

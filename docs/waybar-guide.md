@@ -87,8 +87,9 @@ should not cover anything.
 
 ```jsonc
 "modules-left":   ["sway/workspaces"],
-"modules-center": [],
-"modules-right":  ["cpu","memory","network","bluetooth","pulseaudio","battery","tray","clock"]
+"modules-center": ["sway/mode"],
+"modules-right":  ["cpu","memory","network","bluetooth","pulseaudio","battery",
+                   "power-profiles-daemon","sway/language","tray","clock"]
 ```
 
 Order inside the array is left-to-right order on screen. Moving `clock` to
@@ -146,6 +147,60 @@ With an object (as `pulseaudio` uses `"default"`), it picks by key.
 
 `format-charging`, `format-muted`, `format-disconnected` are *state overrides* —
 they replace `format` entirely when that state is active.
+
+### `power-profiles-daemon` — the Plasma power switcher, rebuilt — added 2026-08-18
+
+```jsonc
+"power-profiles-daemon": {
+    "format": "{icon}",
+    "format-icons": { "performance": "performance", "balanced": "balanced",
+                      "power-saver": "power-saver" }
+}
+```
+
+Click cycles `power-saver → balanced → performance`; scrolling also switches.
+The CSS colours them green / blue / red so the mode is readable without hovering.
+
+**Why this works on Fedora at all** is worth writing down, because it looks like
+it should not. Fedora ships **`tuned`**, not `power-profiles-daemon`, and
+`powerprofilesctl` is not even installed. But the `tuned-ppd` package — already
+running here — publishes tuned on the **same D-Bus name** Waybar expects
+(`net.hadess.PowerProfiles`), mapping the three profile names onto tuned's own
+(`performance` → `throughput-performance`). So the stock module needs no script
+and no shim. To see the three profiles for yourself:
+
+```bash
+busctl --system get-property net.hadess.PowerProfiles \
+    /net/hadess/PowerProfiles net.hadess.PowerProfiles Profiles
+```
+
+Switching needs no polkit password — the click just works.
+
+### `sway/language` — which keyboard layout is live — added 2026-08-18
+
+```jsonc
+"sway/language": {
+    "format": "{short}",
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next"
+}
+```
+
+Shows `us` or `ir` for the `xkb_layout "us,ir"` set in sway §2; the tooltip gives
+the full name (`English (US)` / `Persian`). Clicking toggles, which is the mouse
+alternative to the both-shifts binding.
+
+**This module needs `min-width` in the CSS or it renders as a bare `…`.** See §6.
+
+### `sway/mode` — added 2026-08-18
+
+```jsonc
+"sway/mode": { "format": "{}", "tooltip": false }
+```
+
+Renders **nothing** in the default mode, and the mode's name on a yellow badge
+otherwise. It exists because sway's `move-all` mode (`Alt+Shift+a`) deliberately
+stays open after each action: without a visible badge, a mode you forgot to
+leave is indistinguishable from a keyboard that has stopped working.
 
 ### Interactivity
 
@@ -240,6 +295,23 @@ not set any, so the defaults are used. To control them:
 "battery": { "states": { "warning": 30, "critical": 15 } }
 ```
 
+```css
+/* Power profile: colour tells you the mode at a glance */
+#power-profiles-daemon.performance { color: #f38ba8; }   /* red */
+#power-profiles-daemon.balanced    { color: #89b4fa; }   /* blue */
+#power-profiles-daemon.power-saver { color: #a6e3a1; }   /* green */
+
+/* Sway mode indicator — inverted, so a modal keyboard is unmissable */
+#mode { background-color: #f9e2af; color: #1e1e2e; min-width: 40px; }
+
+/* Without a width floor GTK collapses this label to an ellipsis. See §6. */
+#language { min-width: 40px; }
+```
+
+The `.performance` / `.balanced` / `.power-saver` classes are set by Waybar from
+the live profile, the same way `#battery.warning` is — you style the states, the
+module decides when they apply.
+
 ### The palette
 
 Catppuccin Mocha, shared with your sway lock screen and rofi:
@@ -251,7 +323,8 @@ Catppuccin Mocha, shared with your sway lock screen and rofi:
 | overlay | `#b4b8c5` | dimmed text (inactive workspaces) |
 | blue | `#89b4fa` | accent / focused |
 | yellow | `#f9e2af` | warning |
-| red | `#f38ba8` | critical |
+| red | `#f38ba8` | critical / performance profile |
+| green | `#a6e3a1` | power-saver profile |
 
 ---
 
@@ -326,6 +399,36 @@ touch ~/.config/sway/config.d/90-bar.conf
 **A module shows nothing.** Either it is not listed in a zone array, or the
 program it queries is missing (`pulseaudio` needs `pactl` from
 `pulseaudio-utils`; `bluetooth` needs a running `bluetoothd`).
+
+**A module renders as a bare `…` (ellipsis).** GTK has collapsed the label to
+zero width and ellipsised it. The *content* is fine — the label is. Give it a
+floor:
+
+```css
+#language { min-width: 40px; }
+```
+
+This is not hypothetical: `sway/language` did exactly this, deterministically,
+and the ellipsis is easy to mistake for a tray icon. Two things make it hard to
+diagnose, so check them in this order:
+
+1. **The text is irrelevant.** A literal `format: "KBONLY"` ellipsises just the
+   same, so do not go hunting for a bad `{placeholder}` — that is not the fault.
+2. **It is the stylesheet, not the module.** Run the same config against a
+   throwaway stylesheet to prove it:
+
+   ```bash
+   echo 'window { background: #222; color: #fff; }' > /tmp/t.css
+   pkill waybar; waybar -c ~/.config/waybar/config.jsonc -s /tmp/t.css
+   ```
+
+   If the module appears, the module works and the CSS is the problem.
+
+**A module is invisible but its space is there.** Check `format-icons` for
+**empty strings**. `"format": "{icon}"` with `"performance": ""` renders exactly
+nothing, and the failure is silent — no error, no warning, no log line. Note
+that none of the modules in this config use glyphs; `cpu` is a plain
+`" {usage}%"` with a leading **space**, not an icon.
 
 **Style edits do nothing.** GTK ignores properties it does not implement, in
 silence. Verify the selector matches first by setting something unmissable:
