@@ -15,8 +15,8 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [mako-guide.md](mako-guide.md) | Notifications — sender vs displayer, criteria, do-not-disturb | Notifications look wrong, do not appear, or stay too long |
 | [vscode-guide.md](vscode-guide.md) | VS Code — settings, Vim mode, keybindings, extensions | Editor settings, a keybinding not firing, setting up a new machine |
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
+| [terminal-vs-shell.md](terminal-vs-shell.md) | The concept — what kitty is vs what zsh is, the PTY between them, which one to configure | You are not sure whether a setting belongs to the terminal or the shell, or why a keybinding never arrives |
 | [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, `.ideavimrc` for JetBrains, leader key, netrw | Editing settings, indentation, adding mappings, or working out which of your three vim configs to change |
-
 | [symlinks-guide.md](symlinks-guide.md) | How the repo works — `ln -s`, the traps, adding a config yourself | You want to track a new config, or something broke after moving files |
 | [keybinding-changes.md](keybinding-changes.md) | Every shortcut that moved and why — the Alt/sway collision, the terminal control keys, what to retrain | A shortcut you remember stopped working, or you are about to add a new one |
 
@@ -27,6 +27,9 @@ troubleshooting cookbook at the end.
 
 **"How does this repo actually work?"** → [symlinks-guide.md](symlinks-guide.md),
 which explains the one mechanism everything rests on.
+
+**"Is this kitty's job or zsh's job?"** → [terminal-vs-shell.md](terminal-vs-shell.md),
+which separates the two programs people most often treat as one.
 
 **Setting this up on a new machine** → the repo [README](../README.md), which has
 the dependency list and bootstrap order.
