@@ -310,6 +310,26 @@
     "when": "!terminalFocus"
   },
   {
+    // The same kill, from INSIDE the terminal -- the direction the rule above
+    // deliberately gives up. Was alt+i, which sway now eats.
+    //
+    // ctrl+i cannot be reused here for the reason given above: ^I is Tab. Any
+    // plain ctrl+<letter> has that problem, because it IS a control character,
+    // and terminal.kill sits in VS Code's default
+    // `terminal.integrated.commandsToSkipShell`, so VS Code swallows the key
+    // before zsh ever sees it. Adding Shift is what makes this safe: ctrl+
+    // shift+i is not a control character, so there is nothing for it to steal.
+    //
+    // Scoped to terminalFocus rather than left bare, which costs nothing and
+    // keeps a default: Format Document is ctrl+shift+i on Linux only
+    // (`linux:{primary:3111}`) and is scoped to editorTextFocus, so the two
+    // never overlap. Same trick as ctrl+, above, where scoping to the terminal
+    // leaves Open Settings alone everywhere else.
+    "key": "ctrl+shift+i",
+    "command": "workbench.action.terminal.kill",
+    "when": "terminalFocus"
+  },
+  {
     // Panel-scoped siblings of the two above. These must stay LATER in the file
     // than the plain nextEditor/previousEditor entries: VS Code resolves a key
     // collision by taking the last rule whose `when` matches, so this ordering
