@@ -528,7 +528,7 @@ default_border pixel 1
 A 1-pixel border with no title bar. Other options: `normal` (title bar),
 `none`, `pixel <n>`.
 
-### 5.6 Resize mode (config §8)
+### 5.6 Modes (config §8)
 
 ```
 mode "resize" { ... }
@@ -540,6 +540,43 @@ keys `h/j/k/l` resize instead of moving focus. `Return` or `Escape` exits.
 
 Note a small asymmetry: inside resize mode only `Right` is bound among the arrow
 keys; `Left`, `Up`, `Down` are not. The `h/j/k/l` keys all work.
+
+#### `move-all` mode — added 2026-08-18
+
+```
+mode "move-all" { ... }
+bindsym $mod+Shift+a mode "move-all"
+```
+
+Sway has **no window selection**. There is nothing to "select all" first, so
+where Plasma would have you rubber-band a group of windows and drag them, this
+mode stands in for the selection with the criteria `[workspace="__focused__"]` —
+"every window on the workspace I am looking at". Sway resolves criteria **once,
+before anything moves**, so emptying the workspace out from under the match is
+safe.
+
+| Inside the mode | Action |
+|---|---|
+| `l` | Every window on this workspace → the monitor on the **right** |
+| `h` | Every window on this workspace → the monitor on the **left** |
+| `.` | Every window one workspace **right** along this monitor's strip |
+| `,` | Every window one workspace **left** along this monitor's strip |
+| `Return` / `Escape` | Leave the mode |
+
+Three decisions worth knowing, because each fixes something that broke without
+it:
+
+1. **The mode stays open after a move.** That is the point: press `Alt+Shift+a`
+   once, then tap `. .` to walk the whole group two workspaces along. Waybar
+   shows a yellow `move-all` badge while it is open (see the waybar guide), so a
+   mode you forgot to leave looks like a mode rather than a broken keyboard.
+2. **`l`/`h` move the *windows*, not the workspace.** They merge into whatever
+   workspace is showing on the other monitor, which keeps the odd/even parity of
+   §6.3 intact. The obvious alternative, `move workspace to output right`, would
+   carry an odd-numbered workspace onto the external monitor and break it.
+3. **`l`/`h` end with `focus output`.** Without it, focus stays behind on the
+   workspace you just emptied, and a second press finds nothing to move — which
+   kills the whole point of the mode staying open.
 
 ---
 
@@ -646,7 +683,7 @@ case.
 
 ### 6.4 `ws-cycle.py`
 
-File: `~/.config/sway/scripts/ws-cycle.py` · `ws-cycle.py next|prev [--take]`
+File: `~/.config/sway/scripts/ws-cycle.py` · `ws-cycle.py next|prev [--take|--all]`
 
 Sway has built-in `workspace next_on_output` / `prev_on_output`, which do the
 walking correctly — but they always wrap and can never append. The append is the
@@ -696,6 +733,14 @@ correctly detects no pattern worth extending and falls back to first-free.
    The condition is deliberately narrow. On any output the pins *do* name — which
    is the normal case once the config is right — nothing changes, and evens stay
    reserved for the external even while it is unplugged.
+
+**`--take` vs `--all`.** `--take` drags the focused window; `--all` drags every
+window on the workspace, and is what the `move-all` mode of §5.6 calls. Both
+land on the same `go()`, so the group move inherits the strip's behaviour for
+free — it appends a new workspace at the right edge and stops dead at the left
+edge, exactly like the plain walk. Sway's own
+`move container to workspace next_on_output` would have wrapped instead of
+appending, which is the same reason the plain walk needs this script at all.
 
 Two tunables at the top of the file:
 
@@ -777,7 +822,7 @@ Kills the old bar and starts a fresh one. Because it is `exec_always`, every
 `$mod+Shift+c` reload restarts your bar cleanly — and because it kills first,
 reloading never stacks up duplicate bars.
 
-### `ws-cycle.py` — bound to `$mod+.` `$mod+,` `$mod+Shift+.` `$mod+Shift+,`
+### `ws-cycle.py` — bound to `$mod+.` `$mod+,` `$mod+Shift+.` `$mod+Shift+,`, and `.` `,` inside `move-all` mode
 
 Walks the workspaces on the current monitor and appends a new one when you reach
 the end. The only script here that is not a thin shell wrapper, and the only one
@@ -878,10 +923,12 @@ Modes: `focus`, `fullscreen`, `open`, `visible`, `none`.
 |---|---|
 | `Alt+Return` | New kitty terminal |
 | `Alt+space` | Launch rofi |
-| `Alt+x` / `Alt+Shift+q` | Close focused window |
+| `Alt+Shift+q` | Close focused window |
+| `Alt+q` / `Alt+x` | Close **every** window on the current workspace — no confirmation, no undo |
 | `Alt+f` | Fullscreen toggle |
 | `Alt+Shift+space` | Toggle floating |
 | `Alt+r` | Enter resize mode (`h/j/k/l`, `Escape` to exit) |
+| `Alt+Shift+a` | Enter `move-all` mode — acts on every window of the workspace |
 | `Alt+a` | Focus parent container |
 
 ### Focus and movement
@@ -889,7 +936,16 @@ Modes: `focus`, `fullscreen`, `open`, `visible`, `none`.
 | Keys | Action |
 |---|---|
 | `Alt+h/j/k/l` or arrows | Move focus left/down/up/right |
-| `Alt+Shift+h/j/k/l` or arrows | Move the window |
+| `Alt+Shift+h/j/k/l` or arrows | Move the window one slot through the layout |
+
+There is no "swap these two windows" command. `Alt+Shift+l` slides the focused
+window **one position** along the row, so with two windows it reads as a swap and
+with three you position by repetition. Focus follows the window you moved.
+
+**At the edge, `move` does not stop — it throws the window onto the next
+monitor.** One press too many and the window leaves the screen rather than
+sitting still; `Alt+Shift+h` brings it back. This is the opposite of the
+workspace strip in §6.2, which deliberately stops at the left edge.
 
 ### Workspaces
 
@@ -907,6 +963,22 @@ See [§6](#6-workspace-navigation-and-the-oddeven-scheme) for the full model.
 
 Neither `Alt+.` nor `Alt+,` wraps around, and `Alt+.` does nothing if the last
 workspace is already empty — both are explained in §6.2.
+
+### Moving a whole workspace at once — `move-all` mode
+
+`Alt+Shift+a` first, then the key. The mode **stays open**, so the keys repeat on
+the same group until `Escape`. Full reasoning in [§5.6](#56-modes-config-8).
+
+| Keys | Action |
+|---|---|
+| `Alt+Shift+a` then `l` | All windows → monitor on the right |
+| `Alt+Shift+a` then `h` | All windows → monitor on the left |
+| `Alt+Shift+a` then `.` | All windows → next workspace on this monitor |
+| `Alt+Shift+a` then `,` | All windows → previous workspace on this monitor |
+| `Escape` / `Return` | Leave the mode |
+
+The single-window equivalents are `Alt+Shift+.` and `Alt+Shift+,` above; they
+need no mode.
 
 ### Layout
 

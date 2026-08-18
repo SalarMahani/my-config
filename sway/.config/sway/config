@@ -179,9 +179,13 @@ exec swayidle -w \
     # Start a terminal
     bindsym $mod+Return exec $term
 
-    # Kill focused window (two bindings, both intentional)
+    # Kill focused window
     bindsym $mod+Shift+q kill
-    bindsym $mod+x kill
+
+    # Close every window on the current workspace. No confirmation, no undo.
+    # Two bindings, both intentional.
+    bindsym $mod+q exec swaymsg '[workspace="__focused__"] kill'
+    bindsym $mod+x exec swaymsg '[workspace="__focused__"] kill'
 
     # Application launcher
     bindsym $mod+space exec rofi -show drun
@@ -330,6 +334,37 @@ mode "resize" {
     bindsym Escape mode "default"
 }
 bindsym $mod+r mode "resize"
+
+# $mod+Shift+a acts on EVERY window of the current workspace at once. Sway has
+# no window selection, so there is nothing to "select all" first; the criteria
+# `[workspace="__focused__"]` stands in for the selection and is resolved once,
+# before anything moves.
+#
+# The mode STAYS OPEN after each move, which is the point: press it once, then
+# tap . . to walk the whole group two workspaces right. Escape or Return
+# leaves. Waybar shows "move-all" while it is open, so a stuck mode is visible
+# rather than a keyboard that has mysteriously stopped typing.
+mode "move-all" {
+    # The group to the monitor on the left/right. This moves the WINDOWS, not
+    # the workspace: they merge into whatever workspace is showing over there,
+    # which keeps the odd=eDP-1 / even=DP-1 parity from section 3 intact.
+    # `move workspace to output` would carry an odd number onto the external
+    # and break that. The trailing `focus output` follows them across; without
+    # it a second press would look at the emptied workspace and do nothing.
+    bindsym $right exec swaymsg '[workspace="__focused__"] move container to output right; focus output right'
+    bindsym $left  exec swaymsg '[workspace="__focused__"] move container to output left; focus output left'
+
+    # The group one step along the current monitor's strip. Same walk, same
+    # append-at-the-right-edge behaviour as $mod+period/comma in section 7.3,
+    # because it is the same script.
+    bindsym period exec $scripts/ws-cycle.py next --all
+    bindsym comma  exec $scripts/ws-cycle.py prev --all
+
+    # Return to default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+Shift+a mode "move-all"
 
 
 ### 9. Include — MUST stay last ############################################

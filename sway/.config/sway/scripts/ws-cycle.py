@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Cycle between the workspaces that exist on the CURRENTLY FOCUSED output.
 
-Usage: ws-cycle.py next|prev [--take]
+Usage: ws-cycle.py next|prev [--take|--all]
 
 `--take` drags the focused window along to wherever you land, including onto a
-freshly appended workspace.
+freshly appended workspace. `--all` drags EVERY window on the current workspace
+instead of just the focused one, which is how you relocate a whole desktop.
 
 Unlike `$mod+1..0`, which jumps to one fixed workspace anywhere in the layout,
 this walks the workspaces of the monitor you are looking at right now.
@@ -184,24 +185,34 @@ def number_for_new_workspace(
     raise SystemExit("ws-cycle: no free workspace number available")
 
 
-def go(workspace: dict, take: bool) -> None:
-    """Focus `workspace`, first dragging the focused window there if `take`."""
+def go(workspace: dict, take: bool, take_all: bool = False) -> None:
+    """Focus `workspace`, first dragging windows there if `take`/`take_all`.
+
+    `take_all` matches on the workspace rather than the focused container, so it
+    catches floating windows too. Criteria are resolved once, before anything
+    moves, so emptying the source workspace out from under the match is safe."""
     selector = (
         ["number", str(workspace["num"])]
         if workspace["num"] >= 0
         else [workspace["name"]]
     )
-    if take:
+    if take_all:
+        sway_cmd(
+            '[workspace="__focused__"]', "move", "container", "to", "workspace", *selector
+        )
+    elif take:
         sway_cmd("move", "container", "to", "workspace", *selector)
     sway_cmd("workspace", "--no-auto-back-and-forth", *selector)
 
 
 def main() -> None:
-    args = [a for a in sys.argv[1:] if a != "--take"]
-    take = "--take" in sys.argv[1:]
+    flags = {"--take", "--all"}
+    args = [a for a in sys.argv[1:] if a not in flags]
+    take_all = "--all" in sys.argv[1:]
+    take = "--take" in sys.argv[1:] or take_all
     direction = args[0] if args else "next"
     if direction not in ("next", "prev"):
-        raise SystemExit("usage: ws-cycle.py next|prev [--take]")
+        raise SystemExit("usage: ws-cycle.py next|prev [--take|--all]")
 
     workspaces = json.loads(sway("-t", "get_workspaces"))
     current = next((w for w in workspaces if w["focused"]), None)
@@ -222,11 +233,11 @@ def main() -> None:
             if not WRAP_PREV:
                 return  # left edge of the strip
             index = len(peers)
-        go(peers[index - 1], take)
+        go(peers[index - 1], take, take_all)
         return
 
     if index < len(peers) - 1:
-        go(peers[index + 1], take)
+        go(peers[index + 1], take, take_all)
         return
 
     # Right edge of the strip: grow it. A single-workspace output is just the
@@ -242,7 +253,7 @@ def main() -> None:
         after=max(current["num"], 0),
         attached=attached_outputs(),
     )
-    go({"num": fresh, "name": str(fresh)}, take)
+    go({"num": fresh, "name": str(fresh)}, take, take_all)
 
 
 if __name__ == "__main__":
