@@ -310,6 +310,18 @@ exec swayidle -w \
     bindsym $mod+n exec makoctl mode -t dnd
     bindsym $mod+Shift+n exec makoctl dismiss -a
 
+    # Area screenshot — a second key for Ctrl+Print, which needs Fn on this
+    # laptop's keyboard. The Print bindings themselves are NOT ours: they come
+    # from /usr/share/sway/config.d/60-bindings-screenshot.conf via the include
+    # on the last line, and all three stay bound.
+    #
+    #   Print       whole output      Alt+Print   active window
+    #   Ctrl+Print  area  ── same command as the key below
+    #
+    # grimshot writes to $XDG_SCREENSHOTS_DIR, then $XDG_PICTURES_DIR, then
+    # $HOME. Neither variable is set in this session, so files land in $HOME.
+    bindsym Ctrl+grave exec grimshot save area
+
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 
