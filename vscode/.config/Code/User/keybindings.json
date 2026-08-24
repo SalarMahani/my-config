@@ -1247,6 +1247,11 @@
   "key": "ctrl+shift+l",
   "command": "workbench.action.closePanel",
   "when": "terminal.visible && !panelFocus"
+},
+{
+  "key": "ctrl+/",
+  "command": "-editor.action.accessibleViewAcceptInlineCompletion",
+  "when": "accessibleViewIsShown && accessibleViewCurrentProviderId == 'inlineCompletions'"
 }
 ]
 
