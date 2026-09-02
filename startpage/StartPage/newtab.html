@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>New Tab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0f172a; color: #e2e8f0;
+                 font-family: Inter, system-ui, sans-serif; }
+    #warn { display: none; max-width: 34rem; margin: 12vh auto; padding: 1.5rem 1.75rem;
+            background: #1e293b; border-radius: 14px; line-height: 1.6; }
+    #warn h2 { margin: 0 0 .6rem; font-size: 1.15rem; }
+    #warn code { background: rgba(255,255,255,.08); padding: .1rem .35rem; border-radius: 5px; }
+    #warn a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div id="warn">
+    <h2>StartPage needs file access</h2>
+    <p>This extension redirects the new tab to
+       <code>file:///home/albos/StartPage/index.html</code>, which Chrome only allows
+       when file access is granted.</p>
+    <p>Open <a href="#" id="ext-link">chrome://extensions</a>, find <b>StartPage</b>,
+       click <b>Details</b>, and turn on <b>Allow access to file URLs</b>.</p>
+  </div>
+  <script src="newtab.js"></script>
+</body>
+</html>

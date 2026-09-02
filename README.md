@@ -45,21 +45,28 @@ shell/.zshrc               ->   ~/.zshrc
 | `glow` | Markdown renderer config and the Dimmed Monokai style |
 | `bin` | `~/.local/bin` helpers (`glow-pty`) |
 | `wallpapers` | 12 images → `~/Pictures/wallpapers` |
+| `startpage` | Chrome new-tab extension → `~/StartPage` (code only; its images are untracked) |
 | `docs` | The guides — **not** installed, reference only |
 
 This is deliberately **GNU stow's package format**. Nothing here needs stow —
 `install.sh` has no dependencies — but if you ever `dnf install stow`, then
 `stow sway` from this directory does the same job with no restructuring.
 
-`sway`, `waybar`, `kitty`, `rofi`, `mako` and `wallpapers` are linked as whole
-**directories**, so a new script dropped into `sway/.config/sway/scripts/` is
-picked up with no re-run. The `$HOME` dotfiles are linked per **file**, so
+`sway`, `waybar`, `kitty`, `rofi`, `mako`, `wallpapers` and `startpage` are linked as
+whole **directories**, so a new script dropped into `sway/.config/sway/scripts/` is
+picked up with no re-run. `startpage` is the one package whose payload lands directly
+in `$HOME` rather than one level down, so it is listed separately in
+`DIR_LINK_DEPTH1_PACKAGES`. The `$HOME` dotfiles are linked per **file**, so
 nothing else in your home directory gets swept in.
 
 ⚠️ `vscode` **must** stay per-file. `~/.config/Code` is 549 MB of caches,
 extension packages and `globalStorage` (which holds extension auth tokens) —
 directory-linking it would commit all of that and publish credentials. Only
 three files, 48 KB, are tracked.
+
+⚠️ `startpage` **must** stay a directory link too. Chrome loads `~/StartPage` as an
+unpacked extension; a single symlink to a directory of real files is a far better
+trodden path than a tree of symlinked files inside an extension directory.
 
 ⚠️ `wallpapers` **must** stay a directory link. `wallpaper-next.sh` searches with
 `find -L … -type f`; a plain per-file symlink is `-type l`, so the search would
@@ -75,6 +82,11 @@ return zero images and the cycler would silently stop working.
   `.gitignore`. The tracked configs source them if present. See
   [docs/shell-guide.md §2](docs/shell-guide.md#2-the-local-split--what-makes-this-repo-shareable).
 - **FiraCode Nerd Font** — 50M and owned by no package. A bootstrap step below.
+- **StartPage's wallpapers** (`startpage/StartPage/wallpaper-picutes/`) — 88M, and
+  unlike the sway wallpapers they are *not* load-bearing: no config names a specific
+  file, and the page shows "No wallpapers indexed" and carries on without them. The
+  generated `wallpapers.js` is ignored with them. ⚠️ They sit inside the repo working
+  tree, so **`git clean -xdf` here would delete them.**
 
 ## Editing sway safely
 
@@ -320,11 +332,15 @@ at runtime rather than hardcoding anything.
 **Absolute paths** — two remain, both under `/home/albos/`:
 
 ```bash
-grep -rn "/home/albos" ~/dotfiles --include=config --include="*.sh" | grep -v docs/
+grep -rn "/home/albos" ~/dotfiles \
+  --include=config --include="*.sh" --include="*.yml" \
+  --include="*.js" --include="*.json" | grep -v docs/
 ```
 
-They are the wallpaper in sway config §4 and the lock image in
-`sway/.config/sway/scripts/lock.sh`.
+The wallpaper in sway config §4, the lock image in
+`sway/.config/sway/scripts/lock.sh`, the style path in `glow/glow.yml`, and two in
+the StartPage extension — `manifest.json`'s content-script match and the redirect
+target in `newtab.js`. Both of those must name the real path of `~/StartPage`.
 
 ## What you will still be missing
 

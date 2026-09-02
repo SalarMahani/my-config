@@ -17,6 +17,7 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
 | [terminal-vs-shell.md](terminal-vs-shell.md) | The concept — what kitty is vs what zsh is, the PTY between them, which one to configure | You are not sure whether a setting belongs to the terminal or the shell, or why a keybinding never arrives |
 | [vim-guide.md](vim-guide.md) | vim — the 8-line `.vimrc`, `.ideavimrc` for JetBrains, leader key, netrw | Editing settings, indentation, adding mappings, or working out which of your three vim configs to change |
+| [startpage-guide.md](startpage-guide.md) | The Chrome new tab — the file:// + extension split, setup on a new machine, every key, the Vimium pass-through rule | The new tab is blank or wrong, a key stopped working, or you are setting Chrome up again |
 | [symlinks-guide.md](symlinks-guide.md) | How the repo works — `ln -s`, the traps, adding a config yourself | You want to track a new config, or something broke after moving files |
 | [keybinding-changes.md](keybinding-changes.md) | Every shortcut that moved and why — the Alt/sway collision, the terminal control keys, what to retrain | A shortcut you remember stopped working, or you are about to add a new one |
 
@@ -53,6 +54,7 @@ you saved a file. How a change is applied differs per program:
 | zsh | New terminal, or `exec zsh` |
 | vim | `:source ~/.vimrc`, or restart |
 | VS Code | Nothing — settings apply live |
+| StartPage | Reload the card at `chrome://extensions`, then the tab |
 
 The exception worth memorising: **`swayidle`'s timers are on an `exec` line, so
 `$mod+Shift+c` does NOT apply changes to them.** You must `pkill -x swayidle`

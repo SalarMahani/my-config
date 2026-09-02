@@ -13,3 +13,13 @@
 .swp
 .swo
 .DS_Store
+
+# StartPage's wallpapers -- 88M of images, and not load-bearing the way the sway
+# wallpapers are: no config names a specific file, and the page degrades to
+# "No wallpapers indexed" on its own. wallpapers.js goes with them because it is
+# generated from, and only refers to, files that are not tracked.
+#
+# WARNING: these live inside the repo working tree, so `git clean -xdf` here would
+# delete them. Back them up before running that.
+startpage/StartPage/wallpaper-picutes/
+startpage/StartPage/wallpapers.js

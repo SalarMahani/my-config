@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "StartPage",
+  "version": "1.0.0",
+  "description": "Personal new tab panel: wallpapers, dual calendar, bookmarks and activity.",
+
+  "permissions": ["bookmarks", "history", "topSites", "favicon", "storage"],
+
+  "background": { "service_worker": "sw.js" },
+
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+
+  "content_scripts": [
+    {
+      "matches": ["file:///home/albos/StartPage/index.html"],
+      "js": ["content/bridge.js", "content/bookmarks.js", "content/activity.js"],
+      "css": ["content/panels.css"],
+      "run_at": "document_start"
+    }
+  ],
+
+  "web_accessible_resources": [
+    { "resources": ["_favicon/*"], "matches": ["file:///*"] }
+  ]
+}

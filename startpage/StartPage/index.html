@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Start</title>
+
+<style>
+/* Design tokens. The content script's panels.css reads these too, so the injected
+   panels and the page share one palette. Sequential ramp steps are ordered
+   low -> high and were checked for OKLab lightness monotonicity against the dark
+   panel surface. */
+:root{
+    --sp-text:#e2e8f0;
+    --sp-muted:#94a3b8;
+    --sp-accent:#3987e5;
+
+    --sp-seq-0:#1e293b;   /* no activity - deliberately near-invisible */
+    --sp-seq-1:#184f95;
+    --sp-seq-2:#256abf;
+    --sp-seq-3:#3987e5;
+    --sp-seq-4:#5598e7;
+    --sp-seq-5:#86b6ef;
+    --sp-seq-6:#cde2fb;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+
+body{
+    font-family:Inter,system-ui,sans-serif;
+    background:#0f172a;
+    color:var(--sp-text);
+    min-height:100vh;
+}
+
+/* The wallpaper layer, plus a scrim so panel text stays legible over any image. */
+#bg{
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    background-size:cover;
+    background-position:center;
+    opacity:0;
+    transition:opacity .35s ease;
+}
+#bg.loaded{ opacity:1; }
+
+/* Scrim. It exists so panel text stays legible over any wallpaper - which means
+   it has no job in zen mode, where there are no panels. */
+#bg::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(160deg,rgba(15,23,42,.82),rgba(9,14,28,.9));
+    opacity:1;
+    transition:opacity .3s ease;
+}
+
+.shell{
+    max-width:1240px;
+    margin:0 auto;
+    padding:5vh 2rem 3rem;
+}
+
+header{
+    text-align:center;
+    margin-bottom:1.5rem;
+}
+
+/* 3rem, not 4.5: on a 1366x768 panel the header was taking a third of the viewport
+   before the bookmarks even started. Zen mode restores the large clock below,
+   since nothing competes for space there. */
+#clock{
+    font-size:3rem;
+    font-weight:700;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+}
+
+.dates{
+    margin-top:.75rem;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+    color:var(--sp-muted);
+    font-size:.9rem;
+}
+.dates .sep{ opacity:.4; }
+#date-shamsi{ direction:rtl; unicode-bidi:isolate; }
+
+.panels{
+    display:grid;
+    /* One full-width column: bookmarks first, activity below. Side by side left
+       both cramped on this screen, and the bookmark grid needs the width more.
+       minmax(0,...) because a grid track's default minimum is min-content, and the
+       bookmark titles are nowrap. */
+    grid-template-columns:minmax(0,1fr);
+    gap:1.5rem;
+    align-items:stretch;
+}
+@media (max-width:760px){
+    #clock{ font-size:2.4rem; }
+}
+
+.panel{
+    background:rgba(15,23,42,.82);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:18px;
+    padding:1.25rem 1.35rem;
+    backdrop-filter:blur(12px);
+    /* Column layout so the bookmark tree can take the leftover height and scroll
+       inside it, rather than the two panels ending up wildly different heights. */
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+}
+
+footer{
+    margin-top:2rem;
+    text-align:center;
+    font-size:.7rem;
+    color:var(--sp-muted);
+}
+footer kbd{
+    background:rgba(255,255,255,.1);
+    border-radius:4px;
+    padding:.05rem .3rem;
+    font-family:inherit;
+}
+#wallpaper-hint{ font-variant-numeric:tabular-nums; opacity:.7; }
+
+/* Zen mode - wallpaper, clock and dates only. Toggled with "c". */
+html.sp-zen .panels{ display:none; }
+html.sp-zen .shell{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding-top:0;
+}
+html.sp-zen header{ margin-bottom:0; }
+html.sp-zen #clock{ font-size:4.5rem; }
+
+/* Show the wallpaper as it actually is. The clock then has nothing behind it, so
+   it carries its own shadow instead - some of these wallpapers are near-white. */
+html.sp-zen #bg::after{ opacity:0; }
+html.sp-zen header{
+    text-shadow:0 2px 24px rgba(0,0,0,.75), 0 1px 4px rgba(0,0,0,.65);
+}
+
+/* 12 of the wallpapers are bright enough to swallow white text once the scrim
+   is gone. Rather than put an overlay back, flip the text. Which images are light
+   is measured per file by tools/index-wallpapers.sh -- the page cannot work it out
+   itself, since reading pixels from a file:// image taints the canvas. */
+html.sp-zen.sp-light-bg header{
+    color:#0f172a;
+    text-shadow:0 1px 16px rgba(255,255,255,.9), 0 1px 3px rgba(255,255,255,.95);
+}
+html.sp-zen.sp-light-bg .dates{ color:#1e293b; }
+
+/* Keep a way back out: the key legend fades away but is still there on hover. */
+html.sp-zen footer{ opacity:0; transition:opacity .25s ease; }
+html.sp-zen footer:hover{ opacity:1; }
+</style>
+
+<!-- Runs before the body renders, so a remembered zen mode does not flash the
+     panels on screen. This is a plain file:// document rather than an extension
+     page, so no CSP forbids an inline script. The key name must match page/zen.js. -->
+<script>
+try {
+    if (JSON.parse(localStorage.getItem("zenMode"))) {
+        document.documentElement.classList.add("sp-zen");
+    }
+} catch (e) { /* localStorage can be unavailable on file:// */ }
+</script>
+</head>
+
+<body>
+
+<div id="bg"></div>
+
+<div class="shell">
+
+    <header>
+        <div id="clock"></div>
+        <div class="dates">
+            <span id="date-greg"></span>
+            <span class="sep">·</span>
+            <span id="date-shamsi"></span>
+        </div>
+    </header>
+
+    <div class="panels">
+        <!-- Both panels are filled in by the extension's content script. They start
+             empty rather than with placeholder rows so nothing shifts when the real
+             data lands a beat later. -->
+        <section class="panel" id="bookmarks"></section>
+        <section class="panel" id="activity"></section>
+    </div>
+
+    <footer>
+        <kbd>.</kbd> / <kbd>,</kbd> wallpaper &nbsp; <kbd>w</kbd> random &nbsp;
+        <kbd>s</kbd> filter &nbsp; <kbd>c</kbd> zen &nbsp;
+        <kbd>e</kbd> folders &nbsp; <kbd>a</kbd> links &nbsp;
+        <kbd>&larr;&darr;&uarr;&rarr;</kbd> navigate &nbsp;
+        <kbd>f</kbd> Vimium hints
+        &nbsp;·&nbsp; <span id="wallpaper-hint"></span>
+    </footer>
+
+</div>
+
+<!-- Classic scripts, not modules: this page is served from file://, an opaque
+     origin, and module scripts are fetched with CORS - which would fail here. -->
+<script src="wallpapers.js"></script>
+<script src="page/state.js"></script>
+<script src="page/clock.js"></script>
+<script src="page/wallpaper.js"></script>
+<script src="page/zen.js"></script>
+<script src="page/scroll.js"></script>
+
+</body>
+</html>

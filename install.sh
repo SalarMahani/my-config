@@ -35,6 +35,15 @@ STAMP="$(date +%F)"
 #      working. Linking the directory keeps the files inside it real.
 DIR_LINK_PACKAGES=" sway waybar kitty rofi mako wallpapers "
 
+# Directory-linked packages whose payload sits DIRECTLY in $HOME (~/StartPage)
+# rather than one level down (~/.config/sway, ~/Pictures/wallpapers). Same
+# whole-directory treatment, one level shallower.
+#
+# startpage must be directory-linked, not per-file: Chrome loads ~/StartPage as an
+# unpacked extension, and a tree of symlinked files inside an extension directory is
+# a far less well-trodden path than a single symlink to a directory of real files.
+DIR_LINK_DEPTH1_PACKAGES=" startpage "
+
 info()  { printf '  %s\n' "$*"; }
 act()   { if $DRY_RUN; then printf '  [dry-run] %s\n' "$*"; else printf '  %s\n' "$*"; fi; }
 die()   { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
@@ -88,12 +97,20 @@ install_package() {
     # Whole-directory link. Works for any two-level layout, so both
     # sway/.config/sway -> ~/.config/sway and
     # wallpapers/Pictures/wallpapers -> ~/Pictures/wallpapers are handled.
-    if [[ "$DIR_LINK_PACKAGES" == *" $pkg "* ]]; then
+    #
+    # DIR_LINK_DEPTH1_PACKAGES is the same idea one level shallower, for a payload
+    # that lands directly in $HOME: startpage/StartPage -> ~/StartPage.
+    local depth=
+    if   [[ "$DIR_LINK_PACKAGES"        == *" $pkg "* ]]; then depth=2
+    elif [[ "$DIR_LINK_DEPTH1_PACKAGES" == *" $pkg "* ]]; then depth=1
+    fi
+
+    if [ -n "$depth" ]; then
         local dir rel
         while IFS= read -r dir; do
             rel="${dir#"$root"/}"
             link "$dir" "$HOME/$rel"
-        done < <(find "$root" -mindepth 2 -maxdepth 2 -type d)
+        done < <(find "$root" -mindepth "$depth" -maxdepth "$depth" -type d)
         return 0
     fi
 

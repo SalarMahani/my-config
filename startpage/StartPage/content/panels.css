@@ -1,0 +1,384 @@
+/* Styling for the panels the content script renders.
+   Design tokens (--sp-*) are declared in index.html so the page and the injected
+   panels share one palette. */
+
+.sp-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .85rem;
+}
+.sp-panel-head h2 {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+}
+
+.sp-sub { margin-top: 1.6rem; }
+.sp-sub h3 {
+  margin: 0 0 .7rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--sp-text);
+}
+
+.sp-note {
+  margin: 0 0 1rem;
+  font-size: .72rem;
+  color: var(--sp-muted);
+}
+.sp-error { color: #e66767; font-size: .8rem; }
+.sp-hidden { display: none !important; }
+
+.sp-refresh {
+  background: rgba(255,255,255,.07);
+  color: var(--sp-muted);
+  border: none;
+  padding: .3rem .7rem;
+  border-radius: 7px;
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+}
+.sp-refresh:hover { background: rgba(255,255,255,.14); color: var(--sp-text); }
+
+/* ------------------------------------------------------------------ links */
+
+.sp-link {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .3rem .45rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--sp-text);
+  font-size: .8rem;
+  line-height: 1.3;
+}
+.sp-link:hover { background: rgba(255,255,255,.09); }
+.sp-link:focus {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: -2px;
+  background: rgba(255,255,255,.09);
+}
+
+.sp-link-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-favicon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 3px;
+}
+.sp-favicon-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.12);
+  color: var(--sp-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------- bookmarks */
+
+.sp-head-tools { display: flex; align-items: center; gap: .5rem; }
+
+.sp-filter {
+  flex: none;
+  width: 15rem;
+  background: rgba(255,255,255,.07);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: .35rem .6rem;
+  color: var(--sp-text);
+  font: inherit;
+  font-size: .76rem;
+  outline: none;
+}
+.sp-filter:focus { border-color: var(--sp-accent); background: rgba(255,255,255,.11); }
+.sp-filter::placeholder { color: var(--sp-muted); }
+
+.sp-tidy {
+  flex: none;
+  background: rgba(57,135,229,.18);
+  color: #9cc4f5;
+  border: 1px solid rgba(57,135,229,.35);
+  border-radius: 8px;
+  padding: .35rem .7rem;
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sp-tidy:hover:not(:disabled) { background: rgba(57,135,229,.3); color: #cde2fb; }
+.sp-tidy:disabled { opacity: .55; cursor: default; }
+
+/* Rail and content each scroll inside a fixed overall height, so the page itself
+   does not grow to 439 rows. The viewport here is only ~660px tall (1366x768
+   laptop), which is why this is measured rather than guessed. */
+.sp-bm {
+  display: grid;
+  grid-template-columns: minmax(0, 190px) minmax(0, 1fr);
+  gap: 1rem;
+  height: clamp(320px, calc(100vh - 250px), 640px);
+}
+
+.sp-rail, .sp-content { overflow-y: auto; overscroll-behavior: contain; }
+.sp-rail::-webkit-scrollbar, .sp-content::-webkit-scrollbar { width: 8px; }
+.sp-rail::-webkit-scrollbar-thumb, .sp-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.14);
+  border-radius: 4px;
+}
+
+.sp-rail { border-right: 1px solid rgba(255,255,255,.07); padding-right: .5rem; }
+
+.sp-rail-row {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .28rem .4rem;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: .76rem;
+  color: var(--sp-muted);
+}
+.sp-rail-row:hover { background: rgba(255,255,255,.07); color: var(--sp-text); }
+/* :focus, not :focus-visible -- focus here is set programmatically by the arrow-key
+   navigation, and :focus-visible is not reliably applied for scripted focus. */
+.sp-rail-row:focus {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: -2px;
+  color: var(--sp-text);
+}
+.sp-rail-row.selected {
+  background: rgba(57,135,229,.22);
+  color: var(--sp-text);
+  font-weight: 600;
+}
+.sp-rail-row[data-depth="0"] {
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: .7rem;
+  font-weight: 600;
+  margin-top: .35rem;
+}
+.sp-rail-row[data-depth="1"] { padding-left: 1.1rem; }
+.sp-rail-row[data-depth="2"] { padding-left: 1.9rem; }
+.sp-rail-row[data-depth="3"] { padding-left: 2.7rem; }
+.sp-rail-row[data-depth="4"] { padding-left: 3.5rem; }
+
+.sp-rail-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-rail-count { font-variant-numeric: tabular-nums; font-size: .68rem; opacity: .6; }
+
+.sp-twisty {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: .62rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .12s ease;
+}
+.sp-twisty.open { transform: rotate(90deg); }
+.sp-twisty-empty { visibility: hidden; }
+
+.sp-crumb {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: .5rem;
+  margin-bottom: .6rem;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sp-crumb-path {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--sp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-crumb-count { flex: none; font-size: .7rem; color: var(--sp-muted); }
+
+/* The point of the rework: links flow across the full width instead of down one
+   indented column. ~4 columns at 1240px. */
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1px .5rem;
+}
+
+.sp-group {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  margin: 1.1rem 0 .4rem;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+}
+.sp-group::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.08);
+}
+.sp-group-count { font-variant-numeric: tabular-nums; opacity: .7; }
+
+.sp-hit-path {
+  flex: none;
+  font-size: .64rem;
+  color: var(--sp-muted);
+  opacity: .75;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- KPIs */
+
+.sp-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.sp-tile {
+  background: rgba(255,255,255,.05);
+  border-radius: 12px;
+  padding: .8rem .85rem;
+}
+.sp-tile-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-text);
+}
+.sp-tile-value-sm { font-size: 1.35rem; }
+.sp-tile-label {
+  margin-top: .35rem;
+  font-size: .68rem;
+  color: var(--sp-muted);
+  line-height: 1.3;
+}
+
+/* ------------------------------------------------------------------- bars */
+
+.sp-bars { display: flex; flex-direction: column; gap: 2px; }
+.sp-bar-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 8.5rem) minmax(0, 1fr) 2.2rem;
+  align-items: center;
+  gap: .5rem;
+  padding: .2rem .3rem;
+  border-radius: 7px;
+}
+.sp-bar-row:hover { background: rgba(255,255,255,.06); }
+
+.sp-bar-label {
+  font-size: .76rem;
+  color: var(--sp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-bar-track { height: 10px; background: rgba(255,255,255,.06); border-radius: 5px; }
+.sp-bar {
+  height: 100%;
+  background: var(--sp-accent);
+  /* Thin mark, 4px rounded data-end, square against the baseline it grows from. */
+  border-radius: 0 4px 4px 0;
+}
+.sp-bar-value {
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--sp-muted);
+}
+
+/* ---------------------------------------------------------------- heatmap */
+
+.sp-heat,
+.sp-heat-axis {
+  display: grid;
+  grid-template-columns: 2.2rem repeat(24, minmax(0, 1fr));
+  gap: 2px;
+}
+.sp-heat-day {
+  font-size: .64rem;
+  color: var(--sp-muted);
+  display: flex;
+  align-items: center;
+}
+.sp-heat-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--sp-seq-0);
+}
+.sp-heat-cell[data-step="1"] { background: var(--sp-seq-1); }
+.sp-heat-cell[data-step="2"] { background: var(--sp-seq-2); }
+.sp-heat-cell[data-step="3"] { background: var(--sp-seq-3); }
+.sp-heat-cell[data-step="4"] { background: var(--sp-seq-4); }
+.sp-heat-cell[data-step="5"] { background: var(--sp-seq-5); }
+.sp-heat-cell[data-step="6"] { background: var(--sp-seq-6); }
+.sp-heat-cell:hover { outline: 2px solid var(--sp-text); outline-offset: -1px; }
+
+.sp-heat-axis { margin-top: 3px; }
+.sp-heat-hour {
+  font-size: .6rem;
+  color: var(--sp-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: .7rem;
+}
+.sp-legend .sp-heat-cell { width: 11px; aspect-ratio: 1; }
+.sp-legend-label { font-size: .64rem; color: var(--sp-muted); }
+.sp-legend-label:first-child { margin-right: .3rem; }
+.sp-legend-label:last-child { margin-left: .3rem; }
+
+/* ----------------------------------------------------------------- recent */
+
+.sp-recent { display: flex; flex-direction: column; gap: 1px; }
+.sp-recent-time {
+  flex: none;
+  font-size: .68rem;
+  color: var(--sp-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- tooltip */
+
+.sp-tip {
+  position: fixed;
+  z-index: 50;
+  transform: translate(-50%, -100%);
+  background: #0b1220;
+  color: #e2e8f0;
+  border: 1px solid rgba(255,255,255,.14);
+  padding: .3rem .55rem;
+  border-radius: 7px;
+  font-size: .7rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .1s ease;
+}
+.sp-tip.visible { opacity: 1; }
