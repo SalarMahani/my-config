@@ -117,6 +117,12 @@ SP.whenReady(() => {
   /* -------------------------------------------------------------- rendering */
 
   function renderList() {
+    // Read this BEFORE emptying the list. Clearing detaches the focused row, which
+    // moves activeElement to <body> -- so asking afterwards always says "no", and
+    // every background refresh would silently drop the cursor out of the list.
+    const hadFocus = listEl.contains(document.activeElement) || focusOnRender;
+    focusOnRender = false;
+
     if (observer) { observer.disconnect(); observer = null; }
     listEl.textContent = "";
 
@@ -140,7 +146,7 @@ SP.whenReady(() => {
       listEl.appendChild(row(it));
     }
 
-    restoreCursor();
+    restoreCursor(hadFocus);
     observeRows();
     restStatus();
   }
@@ -183,6 +189,13 @@ SP.whenReady(() => {
           label ? SP.el("span", { class: "sp-dl-tag", text: label }) : null,
         ]),
       ]),
+      SP.el("button", {
+        class: "sp-dl-erase",
+        type: "button",
+        tabindex: "-1",
+        title: "Remove from the list (x) — the file is not touched",
+        text: "✕",
+      }),
     ]);
   }
 
@@ -308,13 +321,12 @@ SP.whenReady(() => {
   }
 
   // Roving tabindex: one tab stop for the whole list, so Tab does not walk every
-  // download. Re-focus only if the list already had focus -- a background refresh
-  // must not steal it from the filter box.
-  function restoreCursor() {
+  // download. `had` is measured by the caller before the rows were destroyed --
+  // re-focus only if the list really had it, so a refresh cannot steal focus from
+  // the filter box.
+  function restoreCursor(had) {
     const all = rows();
     if (!all.length) return;
-    const had = listEl.contains(document.activeElement) || focusOnRender;
-    focusOnRender = false;
     const target = all.find((r) => r.dataset.id === cursorId) || all[0];
     for (const r of all) r.tabIndex = -1;
     target.tabIndex = 0;
@@ -351,6 +363,26 @@ SP.whenReady(() => {
       // After the refresh, not before: load() ends in restStatus(), which would
       // wipe the confirmation the moment it appeared.
       load(true).then(() => status("deleted " + r.name));
+    });
+  }
+
+  // Removing a row moves the cursor to where the eye already is -- the row that
+  // takes its place, or the one above if it was last. Falling back to the top of
+  // the list, which is what restoreCursor() does for an id that no longer exists,
+  // would throw away the position after every single removal.
+  function erase(it) {
+    const all = rows();
+    const at = all.findIndex((r) => r.dataset.id === String(it.id));
+    const next = all[at + 1] || all[at - 1] || null;
+    const nextId = next ? next.dataset.id : null;
+    const keepFocus = listEl.contains(document.activeElement);
+
+    act("eraseDownload", it, (r) => {
+      icons.delete(String(it.id));
+      cursorId = nextId;
+      // The focused row is about to be detached, so hand the focus forward.
+      focusOnRender = keepFocus;
+      load(true).then(() => status("removed " + r.name + " from the list"));
     });
   }
 
@@ -403,7 +435,8 @@ SP.whenReady(() => {
       const it = byId(rowEl.dataset.id);
       if (!it) return;
       focusRow(rowEl);
-      if (e.target.closest(".sp-dl-icon") || e.target.closest(".sp-dl-name")) reveal(it);
+      if (e.target.closest(".sp-dl-erase")) erase(it);
+      else if (e.target.closest(".sp-dl-icon") || e.target.closest(".sp-dl-name")) reveal(it);
     });
 
     // Bound to the list, not to document: these keys only act while focus is
@@ -424,6 +457,10 @@ SP.whenReady(() => {
       if (e.key === "c" && e.ctrlKey) { e.preventDefault(); copyPath(it); return; }
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.key === "p") { e.preventDefault(); copyPath(it); return; }
+      // "x" removes the row, "d" removes the file. Different blast radius, so they
+      // are different keys and only one of them asks first. Delete is the alias
+      // that works without Vimium's pass-through rule.
+      if (e.key === "x" || e.key === "Delete") { e.preventDefault(); erase(it); return; }
       if (e.key === "d") { e.preventDefault(); del(it); return; }
 
       const all = rows();
@@ -446,6 +483,23 @@ SP.whenReady(() => {
       if (root.classList.contains("sp-zen")) return;
       e.preventDefault();
       toggle(!root.classList.contains(VIEW));
+    });
+
+    // The way back in after Escape. "e" and "a" are the bookmark panel's two pane
+    // entry keys, and its handler bails while its panel is hidden -- so in this view
+    // both are free, and both land here because there is only one pane to enter.
+    // Without this, Escape is a one-way door: the list is the only thing on screen,
+    // so blurring leaves nothing to drive, and Vimium's "f" hints the row buttons,
+    // which act on a file instead of putting the cursor on it.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "e" && e.key !== "a") return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (SP.isTyping(e.target)) return;
+      if (!SP.visible(mount)) return;
+      if (listEl.contains(e.target)) return;   // already inside; let j/k have it
+      e.preventDefault();
+      const target = rows().find((r) => r.dataset.id === cursorId) || rows()[0];
+      if (target) focusRow(target);
     });
 
     // "s" focuses the filter, mirroring the bookmark panel's. Both are bound at the

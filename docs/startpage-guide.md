@@ -149,9 +149,11 @@ does nothing while zen is on, and `c` comes back out into whichever view was sho
 | Key | Does |
 |---|---|
 | `q` | enter / leave the downloads view |
+| `e` or `a` | put the cursor back in the list |
 | `j` `k` or `↓` `↑` | move the cursor |
 | `Home` / `End` | first / last row (`G` is Vimium's, `gg` is a prefix) |
 | `Enter` | show the file in Dolphin |
+| `x` or `Delete` | remove the row from the list — the file is not touched |
 | `d` | delete the file from disk, behind a `confirm()` |
 | `Ctrl+C` or `p` | copy the full path |
 | `s` | focus the filter |
@@ -168,17 +170,31 @@ browser, not assumed. Nothing inside an extension can supply a gesture from a ke
 on a page, so opening a file would need a native messaging host running `xdg-open`.
 Not worth a second moving part, given Dolphin is one keystroke away and opens files.
 
+**`x` removes the row, `d` removes the file.** Different blast radius, so they are
+different keys, and only `d` asks first — a history entry costs nothing on disk, which
+is also why Chrome's own row has a ✕ and no confirmation. Removing a row moves the
+cursor onto the one that takes its place (or the one above, if it was last) rather
+than jumping back to the top.
+
+`Escape` blurs the list, which is useful — but the list is the only thing on screen in
+this view, so there is nothing else to drive once you are out of it. **`e` or `a` puts
+the cursor back.** Both work, because there is only one pane here to enter, and the
+bookmark panel's `e`/`a` handler bails while its own panel is hidden. Vimium's `f` is
+not the way back: it hints the row's buttons, which act on a file rather than putting
+the cursor on it.
+
 `d`, `p`, `x` and `v` only arrive if Vimium's pass-through keys are extended past
 `hjkl` ("Freeing `hjkl`" above). `Ctrl+C`, `Enter` and the arrows work regardless, so the view is fully
 usable without touching Vimium's options.
 
-#### Two keys named `s`
+#### Keys that two panels share
 
-`bookmarks.js` and `downloads.js` both bind `s` at the document level. Each bails
-when *its own* panel is off screen, via `SP.visible(mount)` — which tests
-`offsetParent`, so it covers zen mode and the downloads view at once. Exactly one of
-the two panels is ever visible, so there is no ordering dependency between the two
-listeners. **Use `SP.visible()` for any future global hotkey**; testing for the
+`bookmarks.js` and `downloads.js` both bind `s`, and both bind `e`/`a`, at the
+document level. Each bails when *its own* panel is off screen, via `SP.visible(mount)`
+— which tests `offsetParent`, so it covers zen mode and the downloads view at once.
+Exactly one of the two panels is ever visible, so there is no ordering dependency
+between the listeners, and the same key means the same *kind* of thing in both views:
+`s` filters, `e`/`a` enter the list. **Use `SP.visible()` for any future global hotkey**; testing for the
 `sp-zen` class specifically is what this replaced, and it was already wrong the
 moment a second way to hide a panel existed.
 
@@ -226,6 +242,18 @@ dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 \
 Dolphin should open with that file **selected** — `ShowItems` maps to
 `dolphin --select`. This is also a machine-wide change: every app's "show in folder"
 now goes to Dolphin.
+
+#### Read the focus before emptying the list
+
+`renderList()` measures `listEl.contains(document.activeElement)` **at the top**, not
+next to where it is used. Clearing the list detaches the focused row, which moves
+`activeElement` to `<body>` — so asking afterwards always answers "no", and every
+background refresh would silently drop the cursor out of the list while the user was
+navigating. The measured value is passed into `restoreCursor()`.
+
+An operation that *removes* the focused row has to hand the focus forward explicitly
+(`focusOnRender`), because by the time the next render runs there is nothing left to
+read it from.
 
 #### `exists` is lazy, and that is why there is a second search
 

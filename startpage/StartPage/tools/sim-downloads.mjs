@@ -49,6 +49,7 @@ function seed() {
 const find = (id) => ITEMS.find((it) => it.id === id) || null;
 
 let REMOVE_ERROR = null;
+let ERASE_KEEPS = false;   // make erase() report that it removed nothing
 
 globalThis.chrome = {
   runtime: { onMessage: { addListener: (fn) => { listener = fn; } } },
@@ -73,6 +74,13 @@ globalThis.chrome = {
     async removeFile(id) {
       if (REMOVE_ERROR) throw new Error(REMOVE_ERROR);
       find(id).exists = false;
+    },
+    // Returns the ids it actually erased, and drops them from the history.
+    async erase(q) {
+      if (ERASE_KEEPS) return [];
+      const hit = ITEMS.filter((it) => it.id === q.id);
+      ITEMS = ITEMS.filter((it) => it.id !== q.id);
+      return hit.map((it) => it.id);
     },
   },
 };
@@ -200,6 +208,43 @@ seed();
   check("a refused delete returns {error}", /must be complete/.test(r.error || ""),
         JSON.stringify(r));
   check("and leaves the item alone", find(1).exists === true);
+}
+
+console.log("\n=== remove from the list ===");
+seed();
+{
+  const r = await send({ type: "eraseDownload", id: 1 });
+  check("erases the entry", r.ok === true);
+  // The name has to be read BEFORE the erase -- afterwards there is nothing to
+  // look up, and the status line would have nothing to say.
+  check("names what it removed", r.name === "cv.pdf", r.name);
+
+  const { items } = await send({ type: "downloads" });
+  check("the row is gone from the listing", !items.some((it) => it.id === 1),
+        items.map((it) => it.id).join(","));
+  check("the other rows are untouched", items.length === 4, String(items.length));
+
+  const again = await send({ type: "eraseDownload", id: 1 });
+  check("refuses an id that is already gone", /no such download/.test(again.error || ""),
+        again.error);
+}
+
+seed();
+{
+  // Unlike `d`, this must NOT touch the file -- that is the whole distinction
+  // between the two keys, and the one that would be expensive to get wrong.
+  await send({ type: "eraseDownload", id: 1 });
+  check("the file on disk was not deleted", find(1) === null || find(1).exists === true,
+        "item removed from history only");
+}
+
+seed();
+{
+  ERASE_KEEPS = true;
+  const r = await send({ type: "eraseDownload", id: 1 });
+  ERASE_KEEPS = false;
+  check("an erase that removed nothing is reported, not claimed as success",
+        /kept that entry/.test(r.error || ""), JSON.stringify(r));
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\nall passed");

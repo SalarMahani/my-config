@@ -44,6 +44,8 @@ async function handle(msg) {
       return await revealDownload(msg.id);
     case "deleteDownloadFile":
       return await deleteDownloadFile(msg.id);
+    case "eraseDownload":
+      return await eraseDownload(msg.id);
     default:
       throw new Error("unknown message type: " + JSON.stringify(msg && msg.type));
   }
@@ -452,6 +454,20 @@ async function revealDownload(id) {
   if (item.exists === false) return { error: "that file is no longer on disk" };
   chrome.downloads.show(id);   // returns void, and never reports failure
   return { ok: true, name: splitPath(item.filename).name };
+}
+
+// Drops the history entry and leaves the file alone -- the ✕ on Chrome's own
+// downloads page. Irreversible in the sense that Chrome cannot recreate an entry,
+// but it costs nothing on disk, which is why this one does not ask first and
+// deleteDownloadFile does.
+async function eraseDownload(id) {
+  const [item] = await chrome.downloads.search({ id });
+  if (!item) return { error: "no such download" };
+  // Name it before erasing: after the erase there is nothing left to look up.
+  const name = splitPath(item.filename).name || item.finalUrl || "that entry";
+  const erased = await chrome.downloads.erase({ id });
+  if (!erased || !erased.length) return { error: "chrome kept that entry" };
+  return { ok: true, name };
 }
 
 // Deletes the real file. The confirm() is in the panel. This leaves the history

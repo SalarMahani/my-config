@@ -541,4 +541,27 @@ button.sp-dl-icon:hover { background: rgba(255,255,255,.1); }
 .sp-dl-gone .sp-dl-name:hover { color: var(--sp-muted); text-decoration: none; }
 .sp-dl-gone { opacity: .62; }
 
+/* Chrome's own downloads row puts a ✕ here. Hidden until the row is hovered or
+   holds the cursor, so a long list is not a wall of buttons. */
+.sp-dl-erase {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--sp-muted);
+  font: inherit;
+  font-size: .72rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+.sp-dl-row:hover .sp-dl-erase,
+.sp-dl-row:focus .sp-dl-erase { opacity: 1; }
+.sp-dl-erase:hover { background: rgba(255,255,255,.12); color: var(--sp-text); }
+/* Keep the slot reserved even when invisible, or every row shifts on hover. */
+.sp-dl-row { padding-right: .35rem; }
+
 .sp-dl-clip { position: fixed; top: -100px; left: -100px; opacity: 0; }
