@@ -392,3 +392,5 @@ bindsym $mod+Shift+a mode "move-all"
 # Because this loads AFTER everything above, anything in config.d/ overrides
 # this file. Keep it on the last line.
 include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
+
+
