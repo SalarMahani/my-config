@@ -86,7 +86,7 @@ new needs a modifier, or a pass-through rule ("Freeing `hjkl`" below).
 | `c` | zen mode — hide the panels, leaving wallpaper, clock and dates |
 | `s` | focus the bookmark filter (`/` is Vimium's find mode) |
 | `e` / `a` | focus the folder rail / the link grid |
-| `A` | focus "Pick up where you left off" in the Activity panel |
+| `Shift`+`A` | focus "Pick up where you left off" in the Activity panel |
 | `q` | swap between the normal panels and the downloads view |
 | `↓↑←→` or `hjkl` | navigate within whichever pane has focus |
 | `f` | Vimium link hints, as everywhere else |
@@ -132,9 +132,11 @@ that is ~810px, which would leave the Activity panel taller than the bookmark pa
 above it — so `.sp-recent` is a bounded scroller (`clamp(320px, 52vh, 560px)`), about
 a dozen visible and the rest a scroll away.
 
-`A` puts the cursor in it, then `j`/`k` or `↓`/`↑` move, `Home`/`End` jump, `Enter`
-opens and `Escape` leaves. The key is **shifted** because every unshifted single key
-on this page is spoken for; Vimium binds no bare `A`.
+**`Shift`+`A`** puts the cursor in it, then `j`/`k` or `↓`/`↑` move, `Home`/`End`
+jump, `Enter` opens and `Escape` leaves. The key is shifted because every unshifted
+single key on this page is spoken for — `a` is already the bookmark link grid. Vimium
+binds no bare `A`. Write it as `Shift`+`A` wherever it is shown to the user: next to a
+row of lowercase keys, a bare `A` is read as `a`.
 
 Its links stay **normally tabbable** — unlike the bookmark panes, which use a roving
 tabindex. That is deliberate and predates the navigation: `j`/`k` works regardless of
