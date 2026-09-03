@@ -167,6 +167,25 @@ seed();
 res = await send({ type: "removeNodes", ids: ["10"] });
 check("removeTree used for a non-empty folder", res.removed === 1 && !find("10"));
 
+console.log("\n=== every link carries the folder it lives in ===");
+// content/bookmarks.js tags each rendered link with dataset.parent, taken straight
+// from this payload, and paste targets that. byId holds FOLDERS only, so if prune()
+// ever dropped parentId there would be no way to notice: paste would silently fall
+// back to the breadcrumb folder, which is exactly the bug this replaced.
+seed();
+{
+  const { roots } = await send({ type: "bookmarks" });
+  const links = [];
+  const walk = (n) => { for (const c of n.children || []) { if (c.url) links.push(c); else walk(c); } };
+  for (const r of roots) walk(r);
+  const missing = links.filter((l) => !l.parentId);
+  check("the payload has links at all", links.length === 7, String(links.length));
+  check("every one names its parent folder", missing.length === 0,
+        missing.map((l) => l.title).join(",") || "none missing");
+  const a = links.find((l) => l.title === "a");
+  check("and names the right one", a && a.parentId === "100", a && a.parentId);
+}
+
 console.log("\n=== a link moved between sibling subfolders ===");
 // Viewing ALL lists GERMAN's and MOVIE's links inline as separate groups, so this
 // is the move the user makes with the cursor on a link in the OTHER group -- the

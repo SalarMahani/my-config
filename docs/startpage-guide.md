@@ -349,6 +349,18 @@ leaving the rest of the batch intact.
 
 ## 4. Troubleshooting
 
+**An edit to the extension seems to do nothing** — you are almost certainly running
+the old code. Chrome caches extension resources, so *reloading the page is not
+enough*, and the service worker does not reload with the page at all. Press **↻
+Reload** on the card at `chrome://extensions`, then open a **new** tab. Two version
+lines say what is actually live:
+
+- `SP_VERSION` in `content/bridge.js` → the new tab's own console (F12)
+- `SW_VERSION` in `sw.js` → the "service worker" console, linked from the card
+
+Bump both by hand when changing either. Nearly every "it still does the old thing" in
+this project's history has been one of these two being stale.
+
 **New tab shows the extension's setup stub, not the page** — file access is off, or
 `TARGET` in `newtab.js` does not match where `~/StartPage` really is.
 
