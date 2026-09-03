@@ -167,6 +167,25 @@ seed();
 res = await send({ type: "removeNodes", ids: ["10"] });
 check("removeTree used for a non-empty folder", res.removed === 1 && !find("10"));
 
+console.log("\n=== a link moved between sibling subfolders ===");
+// Viewing ALL lists GERMAN's and MOVIE's links inline as separate groups, so this
+// is the move the user makes with the cursor on a link in the OTHER group -- the
+// case that used to land everything in ALL instead, because paste always targeted
+// the breadcrumb folder rather than the folder under the cursor.
+seed();
+{
+  const r = await send({ type: "moveNodes", ids: ["1000"], parentId: "101" });
+  check("reports the real destination", r.targetTitle === "MOVIE", r.targetTitle);
+  check("lands in the sibling subfolder", names("101") === "m,a", names("101"));
+  check("leaves the source subfolder", names("100") === "b,c,d", names("100"));
+  check("does not touch the shared parent",
+        (find("10").node.children || []).map((c) => c.title).join(",") === "GERMAN,MOVIE",
+        (find("10").node.children || []).map((c) => c.title).join(","));
+  check("undo restores the original folder and index",
+        r.undo.length === 1 && r.undo[0].parentId === "100" && r.undo[0].index === 0,
+        JSON.stringify(r.undo));
+}
+
 console.log("\n=== guards ===");
 seed();
 for (const [label, msg, expect] of [

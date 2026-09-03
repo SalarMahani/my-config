@@ -103,13 +103,19 @@ link returns to the rail. `Escape` leaves.
 | mark / unmark | `Space` | `v` |
 | mark everything in view | `Ctrl+A` | — |
 | cut | `Ctrl+X` | `x` |
-| paste into the folder in the breadcrumb | `Ctrl+V` | `p` |
+| paste into the folder holding the cursor | `Ctrl+V` | `p` |
 | delete (moves to a `trash` folder) | `Delete` | `d` |
 | reorder within the folder | `Ctrl+↑` / `Ctrl+↓` | same |
 | undo | `Ctrl+Z` | same |
 
 With nothing marked, an operation acts on whatever has the cursor. `Escape` clears
 marks first and only leaves the pane once there are none.
+
+**Paste lands in the folder holding the highlighted item, not the breadcrumb folder.**
+Selecting a parent lists each subfolder's links inline as labelled groups, so the
+breadcrumb is usually not the folder the highlighted link lives in — put the cursor on
+any link in the destination group and paste. Once something is cut, the status line
+names where a paste would land, and follows the cursor.
 
 **Delete never removes anything** — it moves into a `trash` folder on the bookmarks
 bar. The Chrome API has no undo, and Chrome's own Ctrl+Z will not bring back

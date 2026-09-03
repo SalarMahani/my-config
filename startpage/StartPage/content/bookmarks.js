@@ -288,14 +288,21 @@ SP.whenReady(() => {
 
   function linkGrid(nodes) {
     const grid = SP.el("div", { class: "sp-grid" });
-    for (const n of nodes) grid.appendChild(tagged(SP.link(n.url, n.title), n.id));
+    for (const n of nodes) {
+      grid.appendChild(tagged(SP.link(n.url, n.title), n.id, n.parentId));
+    }
     return grid;
   }
 
   // The bookmark id has to ride on the element: every edit operation works from
   // whatever is focused or marked, and both are found by id.
-  function tagged(el, id) {
+  //
+  // So does the id of the folder the link actually lives in. byId holds folders
+  // only, so there is no way to look that up from the link afterwards -- and paste
+  // needs it, because a grid can show links from many different folders at once.
+  function tagged(el, id, parentId) {
     el.dataset.id = id;
+    if (parentId) el.dataset.parent = parentId;
     el.classList.toggle("marked", marked.has(id));
     el.classList.toggle("cut", clipboard.includes(id));
     return el;
@@ -318,7 +325,7 @@ SP.whenReady(() => {
 
     const grid = SP.el("div", { class: "sp-grid" });
     for (const hit of hits) {
-      const link = tagged(SP.link(hit.node.url, hit.node.title), hit.node.id);
+      const link = tagged(SP.link(hit.node.url, hit.node.title), hit.node.id, hit.node.parentId);
       // Where it lives matters once results span every folder.
       link.appendChild(SP.el("span", { class: "sp-hit-path", text: hit.path.join(" › ") }));
       grid.appendChild(link);
@@ -359,6 +366,7 @@ SP.whenReady(() => {
     row.focus();
     row.scrollIntoView({ block: "nearest" });
     selectFolder(row.dataset.id);   // live preview as the cursor moves
+    showPasteTarget(row, "rail");
   }
 
   function focusLink(link) {
@@ -368,6 +376,7 @@ SP.whenReady(() => {
     link.tabIndex = 0;
     link.focus();
     link.scrollIntoView({ block: "nearest" });
+    showPasteTarget(link, "grid");
   }
 
   function selectFolder(id) {
@@ -530,6 +539,34 @@ SP.whenReady(() => {
     }
   }
 
+  // Paste lands in the folder holding whatever the cursor is on -- NOT the folder
+  // named in the breadcrumb.
+  //
+  // Selecting a parent lists each subfolder's links inline as labelled groups, so
+  // the breadcrumb folder is usually not the folder the highlighted link lives in.
+  // "Always the breadcrumb" made moving a link from one subfolder to another
+  // impossible without first drilling into the destination: the paste silently went
+  // to the parent instead. In the rail the two agree anyway, since focusing a row
+  // selects it.
+  function pasteTarget(el, pane) {
+    if (pane === "grid" && el && el.dataset && el.dataset.parent) return el.dataset.parent;
+    return selected;
+  }
+
+  const folderTitleOf = (id) => {
+    const entry = byId.get(id);
+    return entry ? folderName(entry.node) : "that folder";
+  };
+
+  // With something on the clipboard, where a paste would land is the thing the user
+  // most needs to know -- and it now changes as the cursor moves, so it is shown
+  // rather than left to be discovered after the fact.
+  function showPasteTarget(el, pane) {
+    if (!clipboard.length) return;
+    status(clipboard.length + (clipboard.length === 1 ? " item cut" : " items cut")
+           + " → paste into " + folderTitleOf(pasteTarget(el, pane)));
+  }
+
   function status(text, kind) {
     if (!statusEl) return;
     statusEl.textContent = text || "";
@@ -611,20 +648,22 @@ SP.whenReady(() => {
         clipboard = ids;
         paintStates();
         status(ids.length + (ids.length === 1 ? " item cut" : " items cut")
-               + " — open a folder and paste");
+               + " — paste lands in the folder holding the highlighted item");
         return;
       }
 
       case "paste": {
         if (!clipboard.length) return status("nothing to paste");
-        const res = await SP.send("moveNodes", { ids: clipboard, parentId: selected });
+        const parentId = pasteTarget(el, pane);
+        const res = await SP.send("moveNodes", { ids: clipboard, parentId });
         if (!res || res.error) return status("failed: " + ((res && res.error) || "?"), "warn");
         if (res.refused) return status(res.refused, "warn");
         pushUndo(res.undo);
         clipboard = [];
         marked.clear();
         await reload(focusId, pane);
-        status("moved " + res.moved + " into " + res.targetTitle
+        status("moved " + res.moved + " into "
+               + ((res.targetTitle || "").trim() || folderTitleOf(parentId))
                + (res.failed ? " (" + res.failed + " failed)" : ""));
         return;
       }
