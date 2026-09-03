@@ -21,12 +21,13 @@ understand before changing anything here.
 
 | File | Role |
 |---|---|
-| `manifest.json` | MV3. Permissions: `bookmarks`, `history`, `topSites`, `favicon`, `storage` |
+| `manifest.json` | MV3. Permissions: `bookmarks`, `history`, `topSites`, `favicon`, `storage`, `downloads` |
 | `newtab.html` / `newtab.js` | The stub Chrome actually opens; redirects the tab to the file:// page |
-| `sw.js` | Service worker — the **only** place `chrome.bookmarks` / `chrome.history` exist |
+| `sw.js` | Service worker — the **only** place `chrome.bookmarks` / `chrome.history` / `chrome.downloads` exist |
 | `content/bridge.js` | `SP` helpers, favicons, and the page↔extension `postMessage` bridge |
 | `content/bookmarks.js` | Folder rail + link grid, and the keyboard navigation |
 | `content/activity.js` | KPI tiles, top-sites bars, a 7×24 heatmap, recent list |
+| `content/downloads.js` | The downloads view — the `q` toggle, the list, and its navigation |
 | `content/panels.css` | Styling for everything the content script renders |
 | `page/*.js` | Clock, wallpaper, zen mode, page scrolling — need no permissions |
 | `wallpapers.js` | **Generated.** Run `tools/index-wallpapers.sh` after adding or removing images |
@@ -72,7 +73,9 @@ j k h l G d u r R p P i v V f F / n N * # o O T b B H L K J ^ W t x X m ` ?
 
 `z`, `g` and `y` are **prefixes** (`zi`, `gg`, `yy`), so a bare press never arrives,
 and digits are count prefixes. Arrows, Tab, Enter, Escape and Space are unbound —
-which is why the navigation uses them. That left `a`, `e` and `q` free; `q` still is.
+which is why the navigation uses them. That left `a`, `e` and `q` free — and the
+downloads view has now taken `q`, so **there are no free single keys left.** Anything
+new needs a modifier, or a pass-through rule ("Freeing `hjkl`" below).
 
 | Key | Does |
 |---|---|
@@ -81,6 +84,7 @@ which is why the navigation uses them. That left `a`, `e` and `q` free; `q` stil
 | `c` | zen mode — hide the panels, leaving wallpaper, clock and dates |
 | `s` | focus the bookmark filter (`/` is Vimium's find mode) |
 | `e` / `a` | focus the folder rail / the link grid |
+| `q` | swap between the normal panels and the downloads view |
 | `↓↑←→` or `hjkl` | navigate within whichever pane has focus |
 | `f` | Vimium link hints, as everywhere else |
 
@@ -132,6 +136,132 @@ outside the bookmark panel, where `j`/`k` would otherwise just stop scrolling.
 never off key auto-repeat (driving it off auto-repeat puts the OS repeat delay
 between the first step and the rest, which reads as the scroll stuttering).
 
+### The downloads view
+
+`q` swaps the whole column over to downloads and back. It is a **view, not a third
+panel**: bookmarks and activity are hidden outright, so a long history gets the full
+width and height rather than a slot under two other panels. The clock header stays —
+at `3rem` it costs almost nothing and it keeps an anchor on the page.
+
+Zen mode (`c`) still wins: it hides `.panels` outright, downloads included. So `q`
+does nothing while zen is on, and `c` comes back out into whichever view was showing.
+
+| Key | Does |
+|---|---|
+| `q` | enter / leave the downloads view |
+| `j` `k` or `↓` `↑` | move the cursor |
+| `Home` / `End` | first / last row (`G` is Vimium's, `gg` is a prefix) |
+| `Enter` | show the file in Dolphin |
+| `d` | delete the file from disk, behind a `confirm()` |
+| `Ctrl+C` or `p` | copy the full path |
+| `s` | focus the filter |
+| `Escape` | clear the filter, else leave the list |
+
+With the mouse: **clicking the icon or the name shows the file in Dolphin.** Clicking
+also *focuses* the row — without that, "click a row, then press `d`" would silently do
+nothing, since the keys only fire while the list has focus.
+
+**There is deliberately no "open with the default app."** `chrome.downloads.open()`
+demands a user gesture, and the activation does not survive `runtime.sendMessage` into
+the service worker — Chrome answers `User gesture required`. That was measured in the
+browser, not assumed. Nothing inside an extension can supply a gesture from a keypress
+on a page, so opening a file would need a native messaging host running `xdg-open`.
+Not worth a second moving part, given Dolphin is one keystroke away and opens files.
+
+`d`, `p`, `x` and `v` only arrive if Vimium's pass-through keys are extended past
+`hjkl` ("Freeing `hjkl`" above). `Ctrl+C`, `Enter` and the arrows work regardless, so the view is fully
+usable without touching Vimium's options.
+
+#### Two keys named `s`
+
+`bookmarks.js` and `downloads.js` both bind `s` at the document level. Each bails
+when *its own* panel is off screen, via `SP.visible(mount)` — which tests
+`offsetParent`, so it covers zen mode and the downloads view at once. Exactly one of
+the two panels is ever visible, so there is no ordering dependency between the two
+listeners. **Use `SP.visible()` for any future global hotkey**; testing for the
+`sp-zen` class specifically is what this replaced, and it was already wrong the
+moment a second way to hide a panel existed.
+
+`page/scroll.js`'s `PANES` gained `.sp-dl-list` for the same reason — without it,
+`j`/`k` inside the list would move the cursor *and* scroll the page.
+
+#### Showing a file in Dolphin — the part that is not in this repo
+
+`chrome.downloads.show()` calls `org.freedesktop.FileManager1.ShowItems`, falling
+back to `xdg-open` on the parent directory. **Chrome has no say in which file manager
+answers.** On a stock Fedora install that is Nautilus: it owns the
+`org.freedesktop.FileManager1` bus name, and Dolphin registers its own separate
+`org.kde.dolphin.FileManager1` instead, so Dolphin is never reached.
+
+Pointing that name at Dolphin is a machine-level change, and lives **outside the
+dotfiles repo** (`~/.local/share/dbus-1/` is not one of the tracked paths). To
+redo it on a new machine:
+
+```bash
+mkdir -p ~/.local/share/dbus-1/services
+cat > ~/.local/share/dbus-1/services/org.freedesktop.FileManager1.service <<'EOF'
+[D-BUS Service]
+Name=org.freedesktop.FileManager1
+Exec=/usr/bin/dolphin --daemon
+EOF
+
+xdg-mime default org.kde.dolphin.desktop inode/directory
+dbus-send --session --dest=org.freedesktop.DBus / org.freedesktop.DBus.ReloadConfig
+```
+
+⚠️ **Omit the `SystemdService=` line** that Fedora's packaged
+`org.kde.dolphin.FileManager1.service` carries — it names `plasma-dolphin.service`,
+which does not exist outside Plasma. The user-level file wins over `/usr/share`
+because `XDG_DATA_HOME` sorts first. A file manager already running keeps the name
+until it exits, so this only takes effect for the next activation.
+
+Verify without involving Chrome at all:
+
+```bash
+dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 \
+  /org/freedesktop/FileManager1 org.freedesktop.FileManager1.ShowItems \
+  array:string:"file:///home/albos/Downloads/somefile" string:""
+```
+
+Dolphin should open with that file **selected** — `ShowItems` maps to
+`dolphin --select`. This is also a machine-wide change: every app's "show in folder"
+now goes to Dolphin.
+
+#### `exists` is lazy, and that is why there is a second search
+
+Chrome does not watch the filesystem. Per the API contract, **calling `search()` is
+what schedules the existence check**, and the corrected `exists` only appears on a
+*later* search. Trusting the first answer is exactly the bug where a deleted file
+keeps its icon until the next reload.
+
+So the panel searches again on: a single follow-up ~1200 ms after the first render,
+`window` focus, entering the view with `q`, and the Refresh button. There is no
+`chrome.downloads.onChanged` push — that would need `tabs.sendMessage` and a tab
+lookup, and re-running `search()` is cheaper and covers the same ground.
+
+#### Icons are fetched lazily, per visible row
+
+`chrome.downloads.getFileIcon()` is one IPC and one file stat each, so asking for
+every row up front does not scale to a long history. `downloads.js` observes the rows
+with an `IntersectionObserver` and asks only for the ones scrolled into view,
+coalesced into one `downloadIcons` message per 50 ms batch.
+
+**`getFileIcon` rejects for a file that is not there**, which is the second half of
+the missing-icon behaviour: that id comes back `null`, the row drops its icon button
+entirely and gains `.sp-dl-gone`. One rejection must never fail the batch — see
+`tools/sim-downloads.mjs`.
+
+#### Testing it
+
+```bash
+node ~/StartPage/tools/sim-downloads.mjs
+```
+
+Runs `sw.js`'s handlers against a stubbed `chrome.downloads`, in the same shape as
+`sim-bookmarks.mjs`. It covers the thing a browser cannot be made to show without
+wrecking real state: that a `getFileIcon` rejection becomes `null` for that id alone,
+leaving the rest of the batch intact.
+
 ## 4. Troubleshooting
 
 **New tab shows the extension's setup stub, not the page** — file access is off, or
@@ -139,6 +269,15 @@ between the first step and the rest, which reads as the scroll stuttering).
 
 **Panels are empty** — the content script did not run. Its match pattern in
 `manifest.json` must equal the page's URL exactly, and file access must be on.
+
+**Nautilus opens instead of Dolphin** — a file manager already holding the
+`org.freedesktop.FileManager1` bus name keeps it until it exits. Check the owner with
+`dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus
+org.freedesktop.DBus.GetNameOwner string:org.freedesktop.FileManager1`, then "Showing a file in Dolphin" in §3.
+
+**Every row has an icon, including deleted files** — the follow-up search has not
+landed. Press Refresh; `exists` is only corrected on a *later* `search()` than the
+one that scheduled the check.
 Check the page console *and* the content-script context (the dropdown in DevTools),
 and `sw.js` via the card's "service worker" link.
 

@@ -68,6 +68,25 @@ var SP = {
     ]);
   },
 
+  // The page has SPState.isTyping for the same job; the content script cannot see
+  // it -- separate JS worlds -- so the guard is duplicated here rather than routed
+  // through the bridge for something this small.
+  isTyping(target) {
+    return Boolean(target && (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ));
+  },
+
+  // Is this panel actually on screen? There are now two ways for one to be hidden
+  // -- zen mode and the downloads view -- so the global hotkeys ask the panel they
+  // act on rather than testing for a particular class. offsetParent is null for a
+  // display:none ancestor, which is how both modes hide a panel.
+  visible(el) {
+    return Boolean(el && el.offsetParent);
+  },
+
   fail(mount, err) {
     mount.textContent = "";
     mount.appendChild(SP.el("p", {

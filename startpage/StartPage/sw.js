@@ -1,8 +1,8 @@
 // Privileged API broker.
 //
-// chrome.bookmarks and chrome.history are not exposed to content scripts -- those
-// only get chrome.storage and chrome.runtime.sendMessage -- so every read of them
-// happens here and travels back over a message.
+// chrome.bookmarks, chrome.history and chrome.downloads are not exposed to content
+// scripts -- those only get chrome.storage and chrome.runtime.sendMessage -- so every
+// read of them happens here and travels back over a message.
 
 const DAY = 86400000;
 const CACHE_TTL = 5 * 60 * 1000;
@@ -36,6 +36,14 @@ async function handle(msg) {
       return await reorder(msg.id, msg.delta);
     case "activity":
       return await getActivity(msg.force);
+    case "downloads":
+      return { items: await getDownloads() };
+    case "downloadIcons":
+      return { icons: await getIcons(msg.ids) };
+    case "revealDownload":
+      return await revealDownload(msg.id);
+    case "deleteDownloadFile":
+      return await deleteDownloadFile(msg.id);
     default:
       throw new Error("unknown message type: " + JSON.stringify(msg && msg.type));
   }
@@ -363,4 +371,100 @@ function todayCounters(visits, now) {
     domains: domains.size,
     weekAveragePerDay: Math.round(visits.length / 7),
   };
+}
+
+/* ---------------------------------------------------------------- downloads */
+
+// DownloadItem.filename is the full local path. The panel wants the two halves
+// separately, and "~" rather than the literal home directory -- the rows are narrow
+// and /home/albos is the same eleven characters on every one of them.
+const HOME = "/home/albos";
+
+function splitPath(filename) {
+  const path = filename || "";
+  const cut = path.lastIndexOf("/");
+  const dir = cut < 0 ? "" : path.slice(0, cut);
+  return {
+    name: cut < 0 ? path : path.slice(cut + 1),
+    dir: dir === HOME ? "~" : dir.startsWith(HOME + "/") ? "~" + dir.slice(HOME.length) : dir,
+  };
+}
+
+// `exists` is deliberately passed through as Chrome reports it, stale or not.
+// Chrome does not watch the filesystem: calling search() is itself what schedules
+// the existence check, and the corrected value only shows up on a LATER search.
+// That is why the panel searches again shortly after its first render rather than
+// trusting this first answer.
+async function getDownloads() {
+  // limit:0 means "all". Leaving it out does NOT -- DownloadQuery.limit defaults to
+  // 1000, which would silently truncate a long history with nothing to show for it.
+  const items = await chrome.downloads.search({ orderBy: ["-startTime"], limit: 0 });
+  return items.map((it) => {
+    const { name, dir } = splitPath(it.filename);
+    return {
+      id: it.id,
+      filename: it.filename || "",
+      name,
+      dir,
+      exists: it.exists !== false,
+      state: it.state,
+      bytes: it.bytesReceived || it.fileSize || 0,
+      total: it.totalBytes || 0,
+      startTime: it.startTime,
+      url: it.finalUrl || it.url || "",
+      mime: it.mime || "",
+      error: it.error || null,
+    };
+  });
+}
+
+// One IPC and one file stat per icon, so the panel asks only for the rows that have
+// actually been scrolled into view, in batches. A file that has since been deleted
+// makes this reject; that id comes back null and the row simply renders without an
+// icon, which is the whole point -- it is the missing icon that says "file is gone".
+async function getIcons(ids) {
+  const wanted = (ids || []).slice();
+  const out = {};
+  for (let i = 0; i < wanted.length; i += CHUNK) {
+    const chunk = wanted.slice(i, i + CHUNK);
+    const results = await Promise.all(
+      chunk.map((id) =>
+        chrome.downloads.getFileIcon(id, { size: 32 }).catch(() => null)),
+    );
+    chunk.forEach((id, j) => { out[id] = results[j] || null; });
+  }
+  return out;
+}
+
+// show() hands the path to the desktop's file manager. On this machine that is
+// Dolphin, via a user-level org.freedesktop.FileManager1 D-Bus service -- Chrome
+// itself has no say in which file manager is used. See docs/startpage-guide.md.
+//
+// There is deliberately no "open with the default app" alongside this.
+// chrome.downloads.open() demands a user gesture, and the activation does NOT
+// survive runtime.sendMessage into a service worker -- Chrome answers "User gesture
+// required", which was measured, not assumed. Nothing inside an extension can
+// supply one from a keypress on a page, so opening would need a native messaging
+// host running xdg-open. Not worth a second moving part; Dolphin opens files.
+async function revealDownload(id) {
+  const [item] = await chrome.downloads.search({ id });
+  if (!item) return { error: "no such download" };
+  if (item.exists === false) return { error: "that file is no longer on disk" };
+  chrome.downloads.show(id);   // returns void, and never reports failure
+  return { ok: true, name: splitPath(item.filename).name };
+}
+
+// Deletes the real file. The confirm() is in the panel. This leaves the history
+// entry in place with exists:false, which is already how a missing file renders --
+// so the row stays put and simply loses its icon.
+async function deleteDownloadFile(id) {
+  const [item] = await chrome.downloads.search({ id });
+  if (!item) return { error: "no such download" };
+  if (item.exists === false) return { error: "that file is already gone" };
+  try {
+    await chrome.downloads.removeFile(id);
+    return { ok: true, name: splitPath(item.filename).name };
+  } catch (err) {
+    return { error: String((err && err.message) || err) };
+  }
 }

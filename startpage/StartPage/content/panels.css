@@ -429,3 +429,116 @@
   transition: opacity .1s ease;
 }
 .sp-tip.visible { opacity: 1; }
+
+/* --------------------------------------------------------------- downloads */
+
+/* The list scrolls inside the panel rather than stretching the page, so the head
+   -- and with it the filter box -- stays put over a long history. Taller than the
+   bookmark panes get, since in this view nothing else is on screen. */
+.sp-dl-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  height: clamp(320px, calc(100vh - 210px), 900px);
+  padding-right: .4rem;
+}
+.sp-dl-list::-webkit-scrollbar { width: 8px; }
+.sp-dl-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.14);
+  border-radius: 4px;
+}
+
+.sp-dl-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  /* Opaque, not translucent: rows scroll underneath this. */
+  background: #131c2e;
+  margin: .9rem 0 .35rem;
+  padding: .25rem 0;
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+}
+.sp-dl-group:first-child { margin-top: 0; }
+
+.sp-dl-row {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .35rem .5rem;
+  border-radius: 8px;
+  cursor: default;
+}
+.sp-dl-row:hover { background: rgba(255,255,255,.05); }
+/* :focus, not :focus-visible -- focus here is set programmatically by j/k. */
+.sp-dl-row:focus {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: -2px;
+  background: rgba(255,255,255,.05);
+}
+
+/* Fixed size whether or not there is an icon, so the names stay in one column. */
+.sp-dl-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 6px;
+}
+.sp-dl-icon img { width: 22px; height: 22px; display: block; }
+button.sp-dl-icon { cursor: pointer; }
+button.sp-dl-icon:hover { background: rgba(255,255,255,.1); }
+/* The empty slot IS the signal that the file is not on disk - nothing to click. */
+.sp-dl-icon-blank { border: 1px dashed rgba(255,255,255,.14); }
+
+.sp-dl-body { min-width: 0; flex: 1; }
+
+.sp-dl-name {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--sp-text);
+  font: inherit;
+  font-size: .8rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-dl-name:hover { color: var(--sp-accent); text-decoration: underline; }
+
+.sp-dl-meta {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .68rem;
+  color: var(--sp-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-dl-tag {
+  flex: none;
+  border-radius: 4px;
+  padding: 0 .3rem;
+  font-size: .62rem;
+  background: rgba(255,255,255,.08);
+}
+
+/* Missing, failed or still running: dimmed, but still readable and still there. */
+.sp-dl-gone .sp-dl-name { color: var(--sp-muted); }
+.sp-dl-gone .sp-dl-name:hover { color: var(--sp-muted); text-decoration: none; }
+.sp-dl-gone { opacity: .62; }
+
+.sp-dl-clip { position: fixed; top: -100px; left: -100px; opacity: 0; }

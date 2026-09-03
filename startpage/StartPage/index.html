@@ -131,6 +131,14 @@ footer kbd{
 }
 #wallpaper-hint{ font-variant-numeric:tabular-nums; opacity:.7; }
 
+/* Downloads view - the downloads panel alone, toggled with "q". The header stays:
+   at 3rem it costs little and it keeps an anchor on the page. Zen still wins over
+   this, since it hides .panels outright. */
+#downloads{ display:none; }
+html.sp-dl #bookmarks,
+html.sp-dl #activity{ display:none; }
+html.sp-dl #downloads{ display:flex; }
+
 /* Zen mode - wallpaper, clock and dates only. Toggled with "c". */
 html.sp-zen .panels{ display:none; }
 html.sp-zen .shell{
@@ -198,12 +206,16 @@ try {
              data lands a beat later. -->
         <section class="panel" id="bookmarks"></section>
         <section class="panel" id="activity"></section>
+        <!-- Hidden until "q". It is a separate view rather than a third panel, so
+             a long download history gets the whole column. -->
+        <section class="panel" id="downloads"></section>
     </div>
 
     <footer>
         <kbd>.</kbd> / <kbd>,</kbd> wallpaper &nbsp; <kbd>w</kbd> random &nbsp;
         <kbd>s</kbd> filter &nbsp; <kbd>c</kbd> zen &nbsp;
         <kbd>e</kbd> folders &nbsp; <kbd>a</kbd> links &nbsp;
+        <kbd>q</kbd> downloads &nbsp;
         <kbd>&larr;&darr;&uarr;&rarr;</kbd> navigate &nbsp;
         <kbd>f</kbd> Vimium hints
         &nbsp;·&nbsp; <span id="wallpaper-hint"></span>

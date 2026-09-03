@@ -139,8 +139,10 @@ SP.whenReady(() => {
     document.addEventListener("keydown", (e) => {
       if (e.key !== "s" || e.ctrlKey || e.altKey || e.metaKey) return;
       if (SPTyping(e.target)) return;
-      // Zen mode hides this panel; do not focus an input the user cannot see.
-      if (document.documentElement.classList.contains("sp-zen")) return;
+      // Zen mode and the downloads view both hide this panel; do not focus an
+      // input the user cannot see. The downloads panel guards its own "s" the same
+      // way, and exactly one of the two is ever on screen.
+      if (!SP.visible(mount)) return;
       e.preventDefault();
       filterEl.focus();
       filterEl.select();
@@ -153,7 +155,7 @@ SP.whenReady(() => {
       if (e.key !== "e" && e.key !== "a") return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (SPTyping(e.target)) return;
-      if (document.documentElement.classList.contains("sp-zen")) return;
+      if (!SP.visible(mount)) return;
       e.preventDefault();
       if (e.key === "e") focusRailRow(currentRailRow());
       else focusLink(gridLinks()[0]);
