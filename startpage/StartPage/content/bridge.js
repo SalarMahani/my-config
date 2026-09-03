@@ -68,6 +68,36 @@ var SP = {
     ]);
   },
 
+  // Move by geometry, not by index arithmetic. Both grids here are
+  // repeat(auto-fill, ...) so the column count changes with the window, and both
+  // are split into several blocks by group headings -- so "index +/- columnCount"
+  // would be wrong at every block boundary and on each block's ragged last row.
+  // Find the nearest line of elements in the direction of travel, then the one in
+  // it closest horizontally to where the cursor already is.
+  verticalNeighbour(current, step, all) {
+    const rect = current.getBoundingClientRect();
+    const centre = rect.left + rect.width / 2;
+
+    const ahead = all.filter((el) => {
+      const b = el.getBoundingClientRect();
+      return step > 0 ? b.top > rect.top + 2 : b.top < rect.top - 2;
+    });
+    if (!ahead.length) return null;
+
+    const tops = ahead.map((el) => el.getBoundingClientRect().top);
+    const line = step > 0 ? Math.min(...tops) : Math.max(...tops);
+
+    let best = null;
+    let bestDistance = Infinity;
+    for (const el of ahead) {
+      const b = el.getBoundingClientRect();
+      if (Math.abs(b.top - line) > 2) continue;
+      const d = Math.abs(b.left + b.width / 2 - centre);
+      if (d < bestDistance) { bestDistance = d; best = el; }
+    }
+    return best;
+  },
+
   // The page has SPState.isTyping for the same job; the content script cannot see
   // it -- separate JS worlds -- so the guard is duplicated here rather than routed
   // through the bridge for something this small.

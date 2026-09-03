@@ -131,13 +131,31 @@ footer kbd{
 }
 #wallpaper-hint{ font-variant-numeric:tabular-nums; opacity:.7; }
 
-/* Downloads view - the downloads panel alone, toggled with "q". The header stays:
-   at 3rem it costs little and it keeps an anchor on the page. Zen still wins over
-   this, since it hides .panels outright. */
+/* Downloads view - the downloads panel alone, toggled with "q". Zen still wins
+   over this, since it hides .panels outright. */
 #downloads{ display:none; }
 html.sp-dl #bookmarks,
 html.sp-dl #activity{ display:none; }
 html.sp-dl #downloads{ display:flex; }
+
+/* One flex column exactly as tall as the viewport, so the list takes whatever is
+   left over instead of a calc() guess at the height of everything above it. That
+   guess was too big, which is what made the page scroll as well as the list. */
+html.sp-dl .shell{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:2vh 2rem 1rem;
+}
+html.sp-dl .panels{ flex:1; min-height:0; }
+html.sp-dl #downloads{ height:100%; padding:.9rem 1rem; }
+
+/* Every pixel spent on the header is a download not on screen. The clock stays --
+   it is the anchor - but at a size that costs two rows rather than six. */
+html.sp-dl #clock{ font-size:1.6rem; }
+html.sp-dl header{ margin-bottom:.75rem; }
+html.sp-dl .dates{ margin-top:.25rem; font-size:.78rem; }
+html.sp-dl footer{ margin-top:.75rem; }
 
 /* Zen mode - wallpaper, clock and dates only. Toggled with "c". */
 html.sp-zen .panels{ display:none; }

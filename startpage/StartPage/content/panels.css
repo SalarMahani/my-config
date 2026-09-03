@@ -435,10 +435,15 @@
 /* The list scrolls inside the panel rather than stretching the page, so the head
    -- and with it the filter box -- stays put over a long history. Taller than the
    bookmark panes get, since in this view nothing else is on screen. */
+/* No fixed height and no calc() guessing at how tall the rest of the page is --
+   index.html makes the downloads view a flex column, so this just takes whatever
+   is left. The old clamp() was TALLER than the space available, which is why the
+   page scrolled as well as the list. */
 .sp-dl-list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  height: clamp(320px, calc(100vh - 210px), 900px);
   padding-right: .4rem;
 }
 .sp-dl-list::-webkit-scrollbar { width: 8px; }
@@ -447,15 +452,25 @@
   border-radius: 4px;
 }
 
+/* Rows flow into as many columns as fit; the heading above is a full-width
+   sibling, so a day reads as one block however many columns there are. */
+.sp-dl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  column-gap: .9rem;
+}
+
 .sp-dl-group {
   position: sticky;
   top: 0;
   z-index: 1;
   /* Opaque, not translucent: rows scroll underneath this. */
   background: #131c2e;
-  margin: .9rem 0 .35rem;
-  padding: .25rem 0;
-  font-size: .7rem;
+  /* Kept tight on purpose: most days here hold only one or two downloads, so a
+     heavy heading costs more height than the rows it labels. */
+  margin: .45rem 0 .15rem;
+  padding: .1rem 0;
+  font-size: .64rem;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -463,13 +478,16 @@
 }
 .sp-dl-group:first-child { margin-top: 0; }
 
+/* One line, not two: the name and its metadata sit side by side. At ~46px a row
+   this list showed two days of history; at ~25px it shows a week. */
 .sp-dl-row {
   display: flex;
   align-items: center;
-  gap: .65rem;
-  padding: .35rem .5rem;
-  border-radius: 8px;
+  gap: .5rem;
+  padding: .15rem .35rem;
+  border-radius: 6px;
   cursor: default;
+  min-width: 0;
 }
 .sp-dl-row:hover { background: rgba(255,255,255,.05); }
 /* :focus, not :focus-visible -- focus here is set programmatically by j/k. */
@@ -482,8 +500,8 @@
 /* Fixed size whether or not there is an icon, so the names stay in one column. */
 .sp-dl-icon {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -492,17 +510,26 @@
   background: none;
   border-radius: 6px;
 }
-.sp-dl-icon img { width: 22px; height: 22px; display: block; }
+.sp-dl-icon img { width: 16px; height: 16px; display: block; }
 button.sp-dl-icon { cursor: pointer; }
 button.sp-dl-icon:hover { background: rgba(255,255,255,.1); }
 /* The empty slot IS the signal that the file is not on disk - nothing to click. */
 .sp-dl-icon-blank { border: 1px dashed rgba(255,255,255,.14); }
 
-.sp-dl-body { min-width: 0; flex: 1; }
+/* Name takes the room it needs and ellipses; the meta is pushed to the right and
+   never shrinks, so the columns of times line up down the list. */
+.sp-dl-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+}
 
 .sp-dl-name {
   display: block;
-  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
   padding: 0;
   border: none;
   background: none;
@@ -518,6 +545,8 @@ button.sp-dl-icon:hover { background: rgba(255,255,255,.1); }
 .sp-dl-name:hover { color: var(--sp-accent); text-decoration: underline; }
 
 .sp-dl-meta {
+  flex: none;
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: .4rem;

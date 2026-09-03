@@ -136,14 +136,20 @@ SP.whenReady(() => {
       return;
     }
 
+    // One grid block per day, the way .sp-content splits into .sp-grid blocks:
+    // the heading is a full-width sibling, and the day's rows flow into columns
+    // beneath it. How many columns is up to auto-fill and the window width.
     let group = null;
+    let grid = null;
     for (const it of shown) {
       const label = groupLabel(it.startTime);
       if (label !== group) {
         group = label;
         listEl.appendChild(SP.el("div", { class: "sp-dl-group", text: label }));
+        grid = SP.el("div", { class: "sp-dl-grid" });
+        listEl.appendChild(grid);
       }
-      listEl.appendChild(row(it));
+      grid.appendChild(row(it));
     }
 
     restoreCursor(hadFocus);
@@ -420,8 +426,10 @@ SP.whenReady(() => {
   function navKey(e) {
     if (e.ctrlKey || e.altKey || e.metaKey) return null;
     switch (e.key) {
-      case "ArrowDown": case "j": return 1;
-      case "ArrowUp":   case "k": return -1;
+      case "ArrowDown":  case "j": return "down";
+      case "ArrowUp":    case "k": return "up";
+      case "ArrowLeft":  case "h": return "left";
+      case "ArrowRight": case "l": return "right";
       default: return null;
     }
   }
@@ -467,11 +475,23 @@ SP.whenReady(() => {
       if (e.key === "Home") { e.preventDefault(); focusRow(all[0]); return; }
       if (e.key === "End")  { e.preventDefault(); focusRow(all[all.length - 1]); return; }
 
-      const step = navKey(e);
-      if (step === null) return;
+      const dir = navKey(e);
+      if (!dir) return;
       e.preventDefault();
-      const at = all.indexOf(rowEl);
-      focusRow(all[Math.min(all.length - 1, Math.max(0, at + step))]);
+
+      // Left/right step in document order. Up/down cannot: the grid is auto-fill
+      // so the column count changes with the window, and each day is its own grid
+      // block, so "index +/- columnCount" would be wrong at every day boundary and
+      // on each day's ragged last row. SP.verticalNeighbour walks by geometry, and
+      // crossing out of a day into the next one falls out of that for free.
+      if (dir === "left" || dir === "right") {
+        const at = all.indexOf(rowEl);
+        const to = at + (dir === "right" ? 1 : -1);
+        focusRow(all[Math.min(all.length - 1, Math.max(0, to))]);
+        return;
+      }
+      const next = SP.verticalNeighbour(rowEl, dir === "down" ? 1 : -1, all);
+      if (next) focusRow(next);
     });
 
     // "q" swaps the view. Zen hides every panel including this one, so do not

@@ -150,7 +150,8 @@ does nothing while zen is on, and `c` comes back out into whichever view was sho
 |---|---|
 | `q` | enter / leave the downloads view |
 | `e` or `a` | put the cursor back in the list |
-| `j` `k` or `↓` `↑` | move the cursor |
+| `j` `k` or `↓` `↑` | move down / up a column |
+| `h` `l` or `←` `→` | step back / forward in order |
 | `Home` / `End` | first / last row (`G` is Vimium's, `gg` is a prefix) |
 | `Enter` | show the file in Dolphin |
 | `x` or `Delete` | remove the row from the list — the file is not touched |
@@ -201,6 +202,12 @@ moment a second way to hide a panel existed.
 `page/scroll.js`'s `PANES` gained `.sp-dl-list` for the same reason — without it,
 `j`/`k` inside the list would move the cursor *and* scroll the page.
 
+`SP.verticalNeighbour()` in `bridge.js` is shared by the bookmark grid and this one.
+Both are `auto-fill`, so the column count changes with the window, and both are split
+into blocks by headings — `index ± columnCount` would be wrong at every block boundary
+and on each block's ragged last row. `h`/`l` step in document order; `j`/`k` go by
+geometry, which is also what carries the cursor from the end of one day into the next.
+
 #### Showing a file in Dolphin — the part that is not in this repo
 
 `chrome.downloads.show()` calls `org.freedesktop.FileManager1.ShowItems`, falling
@@ -242,6 +249,29 @@ dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 \
 Dolphin should open with that file **selected** — `ShowItems` maps to
 `dolphin --select`. This is also a machine-wide change: every app's "show in folder"
 now goes to Dolphin.
+
+#### Why it is a grid, and how tall it is
+
+The list is **one grid block per day** — a full-width `.sp-dl-group` heading, then
+that day's rows flowing into `.sp-dl-grid`, which is `repeat(auto-fill, minmax(340px,
+1fr))`. At the 1240px shell width that comes out at three columns; a narrow window
+falls back to one on its own.
+
+This exists because of measured numbers, not taste. The history here holds **995
+downloads over 174 days**, and seven days of it is 22 downloads plus 7 headings. Rows
+were ~46px on two lines, the list was ~450px, so about ten rows fitted — two days.
+One-line rows (~25px) and three columns bring seven days into ~432px.
+
+Most days here hold only one or two downloads, so the **headings, not the rows, are
+the dominant cost** — seven of them are a third of the used height. That is why they
+are deliberately small, and why making them heavier is expensive.
+
+⚠️ **The height is flex, not `calc()`.** `html.sp-dl .shell` is a `height:100vh` flex
+column, `.panels` is `flex:1; min-height:0`, and `.sp-dl-list` takes what is left.
+The original `height: clamp(320px, calc(100vh - 210px), 900px)` was a guess at the
+height of everything above the list, and it guessed ~140px low — so the list was
+taller than its own room and **the page scrolled as well as the list**. Do not put a
+fixed height back; add to the flex column instead.
 
 #### Read the focus before emptying the list
 
