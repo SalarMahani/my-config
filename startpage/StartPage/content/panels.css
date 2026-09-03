@@ -356,51 +356,6 @@
   color: var(--sp-muted);
 }
 
-/* ---------------------------------------------------------------- heatmap */
-
-.sp-heat,
-.sp-heat-axis {
-  display: grid;
-  grid-template-columns: 2.2rem repeat(24, minmax(0, 1fr));
-  gap: 2px;
-}
-.sp-heat-day {
-  font-size: .64rem;
-  color: var(--sp-muted);
-  display: flex;
-  align-items: center;
-}
-.sp-heat-cell {
-  aspect-ratio: 1;
-  border-radius: 2px;
-  background: var(--sp-seq-0);
-}
-.sp-heat-cell[data-step="1"] { background: var(--sp-seq-1); }
-.sp-heat-cell[data-step="2"] { background: var(--sp-seq-2); }
-.sp-heat-cell[data-step="3"] { background: var(--sp-seq-3); }
-.sp-heat-cell[data-step="4"] { background: var(--sp-seq-4); }
-.sp-heat-cell[data-step="5"] { background: var(--sp-seq-5); }
-.sp-heat-cell[data-step="6"] { background: var(--sp-seq-6); }
-.sp-heat-cell:hover { outline: 2px solid var(--sp-text); outline-offset: -1px; }
-
-.sp-heat-axis { margin-top: 3px; }
-.sp-heat-hour {
-  font-size: .6rem;
-  color: var(--sp-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.sp-legend {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: .7rem;
-}
-.sp-legend .sp-heat-cell { width: 11px; aspect-ratio: 1; }
-.sp-legend-label { font-size: .64rem; color: var(--sp-muted); }
-.sp-legend-label:first-child { margin-right: .3rem; }
-.sp-legend-label:last-child { margin-left: .3rem; }
-
 /* ----------------------------------------------------------------- recent */
 
 .sp-recent { display: flex; flex-direction: column; gap: 1px; }

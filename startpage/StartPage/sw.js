@@ -13,6 +13,10 @@ const CACHE_TTL = 5 * 60 * 1000;
 const URL_CAP = 600;
 const CHUNK = 40;
 
+// How many entries "Pick up where you left off" gets. It was 12 while the hour-of-day
+// heatmap sat above it; removing that freed ~410px, and a row is ~27px.
+const RECENT = 30;
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   handle(msg)
     .then(sendResponse)
@@ -323,9 +327,8 @@ async function buildActivity() {
     urlsConsidered: considered.length,
     urlsTotal: items.length,
     topDomains: topDomains(visits),
-    heatmap: heatmap(visits),
     today: todayCounters(visits, now),
-    recent: items.slice(0, 12).map((it) => ({
+    recent: items.slice(0, RECENT).map((it) => ({
       url: it.url,
       title: it.title || it.url,
       lastVisitTime: it.lastVisitTime,
@@ -343,16 +346,6 @@ function topDomains(visits) {
     counts.set(d, entry);
   }
   return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 12);
-}
-
-// 7 rows (Sun..Sat) x 24 columns, counting visits per cell.
-function heatmap(visits) {
-  const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
-  for (const v of visits) {
-    const d = new Date(v.t);
-    grid[d.getDay()][d.getHours()]++;
-  }
-  return grid;
 }
 
 function todayCounters(visits, now) {

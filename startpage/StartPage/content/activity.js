@@ -1,20 +1,18 @@
-// The activity panel: a KPI row, a ranked bar chart, a 7x24 heatmap and a recent list.
+// The activity panel: a KPI row, a ranked bar chart and a recent list.
 //
 // Form choices, in the order the dataviz method asks for them:
 //   - Three headline numbers are a KPI row of stat tiles, not a bar chart.
 //   - "Top sites" compares magnitude across identities, so it is a horizontal bar
 //     chart in ONE hue -- color follows the entity, never the rank, and rank is all
 //     a per-bar hue would encode here.
-//   - Hour-of-day x day-of-week is a grid of magnitudes, so it is a heatmap on a
-//     single sequential ramp, running dark (near the surface) -> light for "more"
-//     because the surface itself is dark. Verified monotonic in OKLab L.
+//
+// There was a 7x24 hour-of-day heatmap here too. It was removed as not worth its
+// height: it answered "when do I browse", which is not a question this page is for,
+// and it cost ~415px that the recent list makes better use of.
 
 SP.whenReady(() => {
   const mount = document.getElementById("activity");
   if (!mount) return;
-
-  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const pad = (n) => String(n).padStart(2, "0");
 
   load(false);
 
@@ -46,7 +44,6 @@ SP.whenReady(() => {
     mount.appendChild(SP.el("p", { class: "sp-note", text: note(data) }));
     mount.appendChild(kpiRow(data.today));
     mount.appendChild(topSites(data.topDomains));
-    mount.appendChild(heatmap(data.heatmap));
     mount.appendChild(recent(data.recent));
   }
 
@@ -122,76 +119,6 @@ SP.whenReady(() => {
     }
 
     section.appendChild(rows);
-    return section;
-  }
-
-  /* -------------------------------------------------------------- heatmap */
-
-  // Browsing counts are heavily skewed, so linear bucketing would flatten nearly
-  // every cell into the lowest step. Quantiles over the non-zero cells spread the
-  // ramp across the data that actually exists; exact counts stay in the tooltip.
-  function bucketer(grid) {
-    const values = grid.flat().filter((v) => v > 0).sort((a, b) => a - b);
-    if (!values.length) return () => 0;
-
-    const cuts = [];
-    for (let i = 1; i <= 5; i++) {
-      cuts.push(values[Math.floor((values.length - 1) * (i / 6))]);
-    }
-    return (v) => {
-      if (v <= 0) return 0;
-      let step = 1;
-      for (const c of cuts) if (v > c) step++;
-      return Math.min(step, 6);
-    };
-  }
-
-  function heatmap(grid) {
-    const section = SP.el("section", { class: "sp-sub" }, [
-      SP.el("h3", { text: "When you browse" }),
-    ]);
-
-    const bucket = bucketer(grid);
-    const heat = SP.el("div", { class: "sp-heat" });
-
-    for (let day = 0; day < 7; day++) {
-      heat.appendChild(SP.el("span", { class: "sp-heat-day", text: DAYS[day] }));
-      for (let hour = 0; hour < 24; hour++) {
-        const count = grid[day][hour];
-        const cell = SP.el("div", {
-          class: "sp-heat-cell",
-          "data-step": String(bucket(count)),
-        });
-        attachTip(cell, DAYS[day] + " " + pad(hour) + ":00 — " + count +
-          " visit" + (count === 1 ? "" : "s"));
-        heat.appendChild(cell);
-      }
-    }
-
-    // Hour axis: one label every six hours, sharing the grid's column template so
-    // the labels stay aligned to their cells.
-    const axis = SP.el("div", { class: "sp-heat-axis" }, [SP.el("span", {})]);
-    for (let hour = 0; hour < 24; hour++) {
-      axis.appendChild(SP.el("span", {
-        class: "sp-heat-hour",
-        text: hour % 6 === 0 ? pad(hour) : "",
-      }));
-    }
-
-    section.appendChild(heat);
-    section.appendChild(axis);
-
-    // Sequential legend. The buckets are quantiles, so it is labelled by direction
-    // rather than with numeric breakpoints it cannot honestly claim.
-    const legend = SP.el("div", { class: "sp-legend" }, [
-      SP.el("span", { class: "sp-legend-label", text: "fewer" }),
-    ]);
-    for (let step = 1; step <= 6; step++) {
-      legend.appendChild(SP.el("span", { class: "sp-heat-cell", "data-step": String(step) }));
-    }
-    legend.appendChild(SP.el("span", { class: "sp-legend-label", text: "more" }));
-    section.appendChild(legend);
-
     return section;
   }
 

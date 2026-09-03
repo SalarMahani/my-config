@@ -22,11 +22,12 @@ understand before changing anything here.
 | File | Role |
 |---|---|
 | `manifest.json` | MV3. Permissions: `bookmarks`, `history`, `topSites`, `favicon`, `storage`, `downloads` |
+| `icons/fire-*.png` | The extension icon (16/32/48/128, generated from `fire-512.png`) and the page favicon |
 | `newtab.html` / `newtab.js` | The stub Chrome actually opens; redirects the tab to the file:// page |
 | `sw.js` | Service worker — the **only** place `chrome.bookmarks` / `chrome.history` / `chrome.downloads` exist |
 | `content/bridge.js` | `SP` helpers, favicons, and the page↔extension `postMessage` bridge |
 | `content/bookmarks.js` | Folder rail + link grid, and the keyboard navigation |
-| `content/activity.js` | KPI tiles, top-sites bars, a 7×24 heatmap, recent list |
+| `content/activity.js` | KPI tiles, top-sites bars, recent list |
 | `content/downloads.js` | The downloads view — the `q` toggle, the list, and its navigation |
 | `content/panels.css` | Styling for everything the content script renders |
 | `page/*.js` | Clock, wallpaper, zen mode, page scrolling — need no permissions |
