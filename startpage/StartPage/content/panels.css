@@ -358,7 +358,30 @@
 
 /* ----------------------------------------------------------------- recent */
 
-.sp-recent { display: flex; flex-direction: column; gap: 1px; }
+/* 30 entries is ~810px, which would make the activity panel taller than the
+   bookmark panel above it. Bounded and scrolled instead: about a dozen visible,
+   the rest a scroll away. Listed in page/scroll.js's PANES so j/k inside it
+   navigates rather than also scrolling the page. */
+.sp-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: clamp(320px, 52vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: .3rem;
+}
+.sp-recent::-webkit-scrollbar { width: 8px; }
+.sp-recent::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.14);
+  border-radius: 4px;
+}
+/* Focus is set programmatically by j/k, and :focus-visible is not reliably
+   applied for scripted focus -- same rule as the other panes. */
+.sp-recent .sp-link:focus {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: -2px;
+}
 .sp-recent-time {
   flex: none;
   font-size: .68rem;

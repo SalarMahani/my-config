@@ -25,6 +25,7 @@ understand before changing anything here.
 | `icons/fire-*.png` | The extension icon (16/32/48/128, generated from `fire-512.png`) and the page favicon |
 | `newtab.html` / `newtab.js` | The stub Chrome actually opens; redirects the tab to the file:// page |
 | `sw.js` | Service worker — the **only** place `chrome.bookmarks` / `chrome.history` / `chrome.downloads` exist |
+| | It logs `SW_VERSION` on startup. **Content scripts reload with the page; this does not** — it reloads only when the extension does, so "I edited `sw.js` and nothing changed" is almost always a stale worker. Read that line in the service worker console to be sure. |
 | `content/bridge.js` | `SP` helpers, favicons, and the page↔extension `postMessage` bridge |
 | `content/bookmarks.js` | Folder rail + link grid, and the keyboard navigation |
 | `content/activity.js` | KPI tiles, top-sites bars, recent list |
@@ -85,6 +86,7 @@ new needs a modifier, or a pass-through rule ("Freeing `hjkl`" below).
 | `c` | zen mode — hide the panels, leaving wallpaper, clock and dates |
 | `s` | focus the bookmark filter (`/` is Vimium's find mode) |
 | `e` / `a` | focus the folder rail / the link grid |
+| `A` | focus "Pick up where you left off" in the Activity panel |
 | `q` | swap between the normal panels and the downloads view |
 | `↓↑←→` or `hjkl` | navigate within whichever pane has focus |
 | `f` | Vimium link hints, as everywhere else |
@@ -116,6 +118,24 @@ Real removal happens only when you are *inside* trash, and asks first.
 
 Bookmarks bar, Other bookmarks and Mobile bookmarks cannot be moved or deleted —
 Chrome forbids it, and the panel refuses with a message rather than failing quietly.
+
+### The recent list
+
+"Pick up where you left off" holds 30 entries (`RECENT` in `sw.js`). At ~27px each
+that is ~810px, which would leave the Activity panel taller than the bookmark panel
+above it — so `.sp-recent` is a bounded scroller (`clamp(320px, 52vh, 560px)`), about
+a dozen visible and the rest a scroll away.
+
+`A` puts the cursor in it, then `j`/`k` or `↓`/`↑` move, `Home`/`End` jump, `Enter`
+opens and `Escape` leaves. The key is **shifted** because every unshifted single key
+on this page is spoken for; Vimium binds no bare `A`.
+
+Its links stay **normally tabbable** — unlike the bookmark panes, which use a roving
+tabindex. That is deliberate and predates the navigation: `j`/`k` works regardless of
+how focus arrived, so there was no reason to take Tab away.
+
+`.sp-recent` is in `page/scroll.js`'s `PANES`, or `j`/`k` inside it would move the
+cursor *and* scroll the page.
 
 ### Freeing `hjkl` (optional)
 

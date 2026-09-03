@@ -4,6 +4,13 @@
 // scripts -- those only get chrome.storage and chrome.runtime.sendMessage -- so every
 // read of them happens here and travels back over a message.
 
+// Bumped by hand when something in here changes shape. Content scripts reload with
+// the page, but this worker only reloads when the extension does -- so "I edited
+// sw.js and nothing changed" is almost always a stale worker, not a bug. Open the
+// service worker console from chrome://extensions and read this line to be sure.
+const SW_VERSION = "2026-09-03 downloads+recent30";
+console.log("StartPage service worker", SW_VERSION);
+
 const DAY = 86400000;
 const CACHE_TTL = 5 * 60 * 1000;
 

@@ -135,8 +135,61 @@ SP.whenReady(() => {
       list.appendChild(link);
     }
     section.appendChild(list);
+    attachRecentNav(list);
     return section;
   }
+
+  // Bound to the list, not to document, so these keys only act while focus is
+  // actually inside it -- the same rule the bookmark panes and the downloads list
+  // follow, and what keeps page/scroll.js owning j/k everywhere else.
+  //
+  // The links are left NORMALLY tabbable rather than given a roving tabindex: that
+  // is a deliberate long-standing choice for this panel, and j/k works regardless
+  // of how focus got here.
+  function attachRecentNav(list) {
+    list.addEventListener("keydown", (e) => {
+      const link = e.target.closest && e.target.closest(".sp-link");
+      if (!link) return;
+
+      if (e.key === "Escape") { e.preventDefault(); link.blur(); return; }
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      const links = [...list.querySelectorAll(".sp-link")];
+      const step = e.key === "ArrowDown" || e.key === "j" ? 1
+                 : e.key === "ArrowUp"   || e.key === "k" ? -1
+                 : 0;
+      if (step === 0) {
+        if (e.key === "Home") { e.preventDefault(); focusRecent(links[0]); }
+        if (e.key === "End")  { e.preventDefault(); focusRecent(links[links.length - 1]); }
+        return;
+      }
+      e.preventDefault();
+      const at = links.indexOf(link);
+      focusRecent(links[Math.min(links.length - 1, Math.max(0, at + step))]);
+    });
+  }
+
+  function focusRecent(link) {
+    if (!link) return;
+    link.focus();
+    // The list is a scroll container of its own, so this scrolls WITHIN it rather
+    // than moving the page.
+    link.scrollIntoView({ block: "nearest" });
+  }
+
+  // The way in. Every unshifted single key is spoken for -- Vimium's bindings plus
+  // this page's own -- so this one is shifted. Vimium binds no bare "A".
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "A" || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (SP.isTyping(e.target)) return;
+    if (!SP.visible(mount)) return;
+    const list = mount.querySelector(".sp-recent");
+    if (!list) return;
+    e.preventDefault();
+    const inside = list.contains(document.activeElement);
+    if (inside) return;
+    focusRecent(list.querySelector(".sp-link"));
+  });
 
   function ago(ts) {
     if (!ts) return "";

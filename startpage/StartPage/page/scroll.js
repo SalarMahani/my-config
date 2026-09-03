@@ -19,7 +19,7 @@
 
   const SPEED = 0.95;       // px per ms while the key is down
   const STEP = 60;          // minimum travel for a quick tap, Vimium's default
-  const PANES = ".sp-rail, .sp-content, .sp-dl-list";
+  const PANES = ".sp-rail, .sp-content, .sp-dl-list, .sp-recent";
 
   const MOVES = { j: [0, 1], k: [0, -1], h: [-1, 0], l: [1, 0] };
 
