@@ -23,3 +23,7 @@
 # delete them. Back them up before running that.
 startpage/StartPage/wallpaper-picutes/
 startpage/StartPage/wallpapers.js
+
+# Agent scratch notes. Previously only in .git/info/exclude, which is local to one
+# clone and never travels -- so a second clone could have committed these.
+.claude/
