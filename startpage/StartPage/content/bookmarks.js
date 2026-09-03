@@ -20,11 +20,11 @@ SP.whenReady(() => {
   let expanded = {};                  // id -> bool
   let query = "";
 
-  let railEl, contentEl, filterEl, headEl;
+  let railEl, contentEl, filterEl, headEl, statusEl;
 
   load();
 
-  function load() {
+  function load(done) {
     Promise.all([
       SP.send("bookmarks"),
       chrome.storage.local.get([SEL_KEY, EXP_KEY]),
@@ -35,7 +35,8 @@ SP.whenReady(() => {
       buildIndex();
       selected = byId.has(stored[SEL_KEY]) ? stored[SEL_KEY] : firstRootId();
       render();
-    }).catch((err) => SP.fail(mount, err));
+      if (done) done();
+    }).catch((err) => { SP.fail(mount, err); if (done) done(); });
   }
 
   /* ------------------------------------------------------------- the index */
@@ -110,8 +111,10 @@ SP.whenReady(() => {
       filterEl.blur();
     });
 
+    statusEl = SP.el("span", { class: "sp-status" });
     headEl = SP.el("div", { class: "sp-panel-head" }, [
       SP.el("h2", { text: "Bookmarks" }),
+      statusEl,
       SP.el("div", { class: "sp-head-tools" }, [tidyButton(), filterEl]),
     ]);
 
@@ -124,6 +127,13 @@ SP.whenReady(() => {
     renderRail();
     renderContent();
     attachNavigation();
+
+    if (!render.refreshBound) {
+      render.refreshBound = true;
+      // Cheaper than a chrome.bookmarks.on* port from sw.js, and covers the real
+      // case: bookmarks edited elsewhere while this tab sat in the background.
+      window.addEventListener("focus", () => { if (!marked.size && !clipboard.length) load(); });
+    }
 
     // "s" is free in Vimium's default mappings; "/" is not -- it opens find mode.
     document.addEventListener("keydown", (e) => {
@@ -172,7 +182,9 @@ SP.whenReady(() => {
       : depth === 0;
 
     const row = SP.el("div", {
-      class: "sp-rail-row" + (node.id === selected ? " selected" : ""),
+      class: "sp-rail-row" + (node.id === selected ? " selected" : "")
+        + (marked.has(node.id) ? " marked" : "")
+        + (clipboard.includes(node.id) ? " cut" : ""),
       "data-depth": String(depth),
       "data-id": node.id,
       // Roving tabindex: -1 keeps rows reachable by script without making Tab walk
@@ -205,7 +217,7 @@ SP.whenReady(() => {
       text: String(countLinks(node)),
     }));
 
-    row.addEventListener("click", () => selectFolder(node.id));
+    row.addEventListener("click", () => focusRailRow(row));
 
     railEl.appendChild(row);
 
@@ -274,8 +286,17 @@ SP.whenReady(() => {
 
   function linkGrid(nodes) {
     const grid = SP.el("div", { class: "sp-grid" });
-    for (const n of nodes) grid.appendChild(SP.link(n.url, n.title));
+    for (const n of nodes) grid.appendChild(tagged(SP.link(n.url, n.title), n.id));
     return grid;
+  }
+
+  // The bookmark id has to ride on the element: every edit operation works from
+  // whatever is focused or marked, and both are found by id.
+  function tagged(el, id) {
+    el.dataset.id = id;
+    el.classList.toggle("marked", marked.has(id));
+    el.classList.toggle("cut", clipboard.includes(id));
+    return el;
   }
 
   function renderSearch() {
@@ -295,7 +316,7 @@ SP.whenReady(() => {
 
     const grid = SP.el("div", { class: "sp-grid" });
     for (const hit of hits) {
-      const link = SP.link(hit.node.url, hit.node.title);
+      const link = tagged(SP.link(hit.node.url, hit.node.title), hit.node.id);
       // Where it lives matters once results span every folder.
       link.appendChild(SP.el("span", { class: "sp-hit-path", text: hit.path.join(" › ") }));
       grid.appendChild(link);
@@ -330,6 +351,7 @@ SP.whenReady(() => {
 
   function focusRailRow(row) {
     if (!row) return;
+    enterPane("rail");
     for (const r of railRows()) r.tabIndex = -1;
     row.tabIndex = 0;
     row.focus();
@@ -339,6 +361,7 @@ SP.whenReady(() => {
 
   function focusLink(link) {
     if (!link) return;
+    enterPane("grid");
     for (const a of gridLinks()) a.tabIndex = -1;
     link.tabIndex = 0;
     link.focus();
@@ -383,9 +406,18 @@ SP.whenReady(() => {
     const row = e.target.closest && e.target.closest(".sp-rail-row");
     if (!row) return;
 
-    if (e.key === "Escape") { row.blur(); e.preventDefault(); return; }
+    if (e.key === "Escape") {
+      // Clear a selection first; only leave the pane once there is none.
+      if (marked.size) { marked.clear(); paintStates(); status(""); }
+      else row.blur();
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Enter")  { selectFolder(row.dataset.id); e.preventDefault(); return; }
     if (e.key === "Tab" && !e.shiftKey) { focusLink(gridLinks()[0]); e.preventDefault(); return; }
+
+    const edit = editKey(e);
+    if (edit) { e.preventDefault(); runEdit(edit, row, "rail"); return; }
 
     const dir = navKey(e);
     if (!dir) return;
@@ -416,12 +448,20 @@ SP.whenReady(() => {
     const link = e.target.closest && e.target.closest(".sp-link");
     if (!link) return;
 
-    if (e.key === "Escape") { link.blur(); e.preventDefault(); return; }
+    if (e.key === "Escape") {
+      if (marked.size) { marked.clear(); paintStates(); status(""); }
+      else link.blur();
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Enter" && e.ctrlKey) {
       window.open(link.href, "_blank");
       e.preventDefault();
       return;
     }
+
+    const edit = editKey(e);
+    if (edit) { e.preventDefault(); runEdit(edit, link, "grid"); return; }
 
     const dir = navKey(e);
     if (!dir) return;
@@ -469,6 +509,204 @@ SP.whenReady(() => {
     }
     return best;
   }
+
+
+  /* ------------------------------------------------------------------ editing */
+
+  // Every operation here is a chrome.bookmarks.move() -- including delete, which
+  // moves into a "trash" folder rather than removing. The API has no undo and
+  // Chrome's own Ctrl+Z will not reach an API deletion, so making delete a move is
+  // what makes the whole feature reversible from one uniform undo.
+
+  const PROTECTED = new Set(["1", "302", "340"]);  // Bookmarks bar, Other, Mobile
+
+  const marked = new Set();     // ids ticked for a bulk operation
+  let clipboard = [];           // ids cut, awaiting a paste
+  let undoStack = [];           // [[{id, parentId, index}], ...]
+  let lastPane = null;          // "rail" | "grid" -- switching panes clears marks
+
+  const UNDO_LIMIT = 20;
+
+  function editKey(e) {
+    if (e.altKey || e.metaKey) return null;
+
+    if (e.ctrlKey) {
+      switch (e.key.toLowerCase()) {
+        case "x": return "cut";
+        case "v": return "paste";
+        case "a": return "markAll";
+        case "z": return "undo";
+        case "arrowup": return "moveUp";
+        case "arrowdown": return "moveDown";
+        default: return null;
+      }
+    }
+
+    // The vim set only arrives if Vimium is passing these keys through for this URL.
+    switch (e.key) {
+      case " ": case "v": return "mark";
+      case "x": return "cut";
+      case "p": return "paste";
+      case "d": case "Delete": return "delete";
+      default: return null;
+    }
+  }
+
+  function status(text, kind) {
+    if (!statusEl) return;
+    statusEl.textContent = text || "";
+    statusEl.className = "sp-status" + (kind ? " sp-status-" + kind : "");
+  }
+
+  // Re-apply marked/cut classes in place, so ticking an item does not rebuild the
+  // pane and throw away focus.
+  function paintStates() {
+    for (const el of [...railRows(), ...gridLinks()]) {
+      const id = el.dataset.id;
+      el.classList.toggle("marked", marked.has(id));
+      el.classList.toggle("cut", clipboard.includes(id));
+    }
+  }
+
+  // With nothing marked, operate on whatever has the cursor.
+  function targets(el) {
+    if (marked.size) return [...marked];
+    const id = el && el.dataset && el.dataset.id;
+    return id ? [id] : [];
+  }
+
+  function enterPane(pane) {
+    if (lastPane && lastPane !== pane && marked.size) {
+      marked.clear();
+      paintStates();
+      status("selection cleared");
+    }
+    lastPane = pane;
+  }
+
+  function pushUndo(entry) {
+    if (!entry || !entry.length) return;
+    undoStack.push(entry);
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  }
+
+  // Rebuild from the live tree, then put the cursor back where it was.
+  async function reload(focusId, pane) {
+    await new Promise((resolve) => { load(resolve); });
+    if (!focusId) return;
+    if (pane === "rail") {
+      const row = railRows().find((r) => r.dataset.id === focusId);
+      if (row) focusRailRow(row);
+    } else {
+      const link = gridLinks().find((a) => a.dataset.id === focusId);
+      if (link) focusLink(link);
+    }
+  }
+
+  async function runEdit(action, el, pane) {
+    const ids = targets(el);
+    const focusId = el && el.dataset ? el.dataset.id : null;
+
+    switch (action) {
+      case "mark": {
+        if (!focusId) return;
+        marked.has(focusId) ? marked.delete(focusId) : marked.add(focusId);
+        paintStates();
+        status(marked.size ? marked.size + " selected" : "");
+        return;
+      }
+
+      case "markAll": {
+        const all = pane === "rail" ? railRows() : gridLinks();
+        for (const node of all) if (node.dataset.id) marked.add(node.dataset.id);
+        paintStates();
+        status(marked.size + " selected");
+        return;
+      }
+
+      case "cut": {
+        if (!ids.length) return status("nothing to cut");
+        const blocked = ids.filter((id) => PROTECTED.has(id));
+        if (blocked.length) {
+          return status("Bookmarks bar, Other and Mobile cannot be moved", "warn");
+        }
+        clipboard = ids;
+        paintStates();
+        status(ids.length + (ids.length === 1 ? " item cut" : " items cut")
+               + " — open a folder and paste");
+        return;
+      }
+
+      case "paste": {
+        if (!clipboard.length) return status("nothing to paste");
+        const res = await SP.send("moveNodes", { ids: clipboard, parentId: selected });
+        if (!res || res.error) return status("failed: " + ((res && res.error) || "?"), "warn");
+        if (res.refused) return status(res.refused, "warn");
+        pushUndo(res.undo);
+        clipboard = [];
+        marked.clear();
+        await reload(focusId, pane);
+        status("moved " + res.moved + " into " + res.targetTitle
+               + (res.failed ? " (" + res.failed + " failed)" : ""));
+        return;
+      }
+
+      case "delete": {
+        if (!ids.length) return status("nothing to delete");
+        // Inside trash there is nowhere further to move to, so this is the one
+        // place a real removal can happen -- and it asks first.
+        if (inTrash(selected)) {
+          if (!window.confirm("Permanently delete " + ids.length +
+              " item(s)? This cannot be undone.")) return;
+          const res = await SP.send("removeNodes", { ids });
+          if (res.refused) return status(res.refused, "warn");
+          marked.clear();
+          await reload(null, pane);
+          return status("removed " + res.removed + " for good");
+        }
+        const res = await SP.send("trashNodes", { ids });
+        if (!res || res.error) return status("failed: " + ((res && res.error) || "?"), "warn");
+        if (res.refused) return status(res.refused, "warn");
+        pushUndo(res.undo);
+        marked.clear();
+        await reload(null, pane);
+        status("moved " + res.moved + " to trash — Ctrl+Z to undo");
+        return;
+      }
+
+      case "moveUp":
+      case "moveDown": {
+        if (!focusId) return;
+        const res = await SP.send("reorder", { id: focusId, delta: action === "moveUp" ? -1 : 1 });
+        if (!res || res.error) return status("failed: " + ((res && res.error) || "?"), "warn");
+        if (res.refused) return status(res.refused, "warn");
+        pushUndo(res.undo);
+        await reload(focusId, pane);
+        status("moved " + (action === "moveUp" ? "up" : "down"));
+        return;
+      }
+
+      case "undo": {
+        const entry = undoStack.pop();
+        if (!entry) return status("nothing to undo");
+        // Every operation was a move, so undo is putting each node back at the
+        // {parentId, index} captured before it.
+        for (const item of entry) {
+          await SP.send("moveNodes", { ids: [item.id], parentId: item.parentId });
+        }
+        await reload(null, pane);
+        status("undid " + entry.length + " move" + (entry.length === 1 ? "" : "s"));
+        return;
+      }
+    }
+  }
+
+  const inTrash = (id) => {
+    const entry = byId.get(id);
+    if (!entry) return false;
+    const name = folderName(entry.node).toLowerCase();
+    return name === "trash" || entry.path.some((p) => p.toLowerCase() === "trash");
+  };
 
   /* ------------------------------------------------------- tidy loose links */
 

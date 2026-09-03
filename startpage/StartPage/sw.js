@@ -26,6 +26,14 @@ async function handle(msg) {
       return { roots: await getBookmarks() };
     case "tidyLoose":
       return await tidyLoose();
+    case "moveNodes":
+      return await moveNodes(msg.ids, msg.parentId);
+    case "trashNodes":
+      return await trashNodes(msg.ids);
+    case "removeNodes":
+      return await removeNodes(msg.ids);
+    case "reorder":
+      return await reorder(msg.id, msg.delta);
     case "activity":
       return await getActivity(msg.force);
     default:
@@ -37,6 +45,11 @@ async function handle(msg) {
 
 function prune(node) {
   const out = { id: node.id, title: node.title || "" };
+  // parentId and index are what undo restores to; unmodifiable marks nodes the
+  // editing UI must refuse (Chrome sets it on managed bookmarks).
+  if (node.parentId) out.parentId = node.parentId;
+  if (typeof node.index === "number") out.index = node.index;
+  if (node.unmodifiable) out.unmodifiable = node.unmodifiable;
   if (node.url) out.url = node.url;
   if (node.children) out.children = node.children.map(prune);
   return out;
@@ -60,6 +73,16 @@ const LOOSE_ROOTS = [BAR_ID, "302"];
 //
 // This edits the user's real bookmarks and empties Chrome's bookmarks strip, so it
 // runs only from an explicit, confirmed button press, never on page load.
+// Find a folder by name directly on the bookmarks bar, or make one. Shared by the
+// "extra" tidy and by trash, so neither can end up with a duplicate on a repeat run.
+async function findOrCreate(title) {
+  const bar = await chrome.bookmarks.getSubTree(BAR_ID);
+  const existing = ((bar[0] && bar[0].children) || []).find(
+    (c) => !c.url && (c.title || "").trim().toLowerCase() === title,
+  );
+  return existing || chrome.bookmarks.create({ parentId: BAR_ID, title });
+}
+
 async function tidyLoose() {
   // Re-read the tree rather than trusting ids the panel captured when it rendered;
   // bookmarks may have changed in between.
@@ -75,15 +98,7 @@ async function tidyLoose() {
   }
   if (!loose.length) return { moved: 0, attempted: 0, folderId: null };
 
-  // Reuse an existing "extra" rather than making a second one on a repeat run.
-  const bar = roots.find((r) => r.id === BAR_ID);
-  const existing = (bar ? bar.children || [] : []).find(
-    (c) => !c.url && (c.title || "").trim().toLowerCase() === "extra",
-  );
-  const folder = existing || await chrome.bookmarks.create({
-    parentId: BAR_ID,
-    title: "extra",
-  });
+  const folder = await findOrCreate("extra");
 
   // Sequentially, so the moved links keep their original relative order.
   let moved = 0;
@@ -98,6 +113,144 @@ async function tidyLoose() {
   }
 
   return { moved, attempted: loose.length, failed: failed.length, folderId: folder.id };
+}
+
+/* ------------------------------------------------------------------ editing */
+
+// Chrome refuses to move or remove these, so the UI must never offer to.
+const PROTECTED = new Set([BAR_ID, "302", "340"]);
+
+// Everything here is expressed as a move, including delete -- which is why undo is
+// uniform: put each node back at the {parentId, index} recorded before the write.
+async function snapshot(ids) {
+  const nodes = await chrome.bookmarks.get(ids).catch(() => []);
+  return nodes.map((n) => ({ id: n.id, parentId: n.parentId, index: n.index }));
+}
+
+function refuse(reason) {
+  return { moved: 0, failed: 0, refused: reason };
+}
+
+async function guard(ids) {
+  for (const id of ids) {
+    if (PROTECTED.has(id)) return "Bookmarks bar, Other and Mobile cannot be moved";
+  }
+  const nodes = await chrome.bookmarks.get(ids).catch(() => []);
+  for (const n of nodes) {
+    if (n.unmodifiable) return `"${n.title}" is managed and cannot be changed`;
+  }
+  return null;
+}
+
+// True if `parentId` is `id` itself or sits underneath it. Chrome rejects such a
+// move anyway, but catching it here produces a usable message instead of an error.
+async function isSelfOrDescendant(id, parentId) {
+  let cursor = parentId;
+  while (cursor) {
+    if (cursor === id) return true;
+    const [node] = await chrome.bookmarks.get(cursor).catch(() => []);
+    if (!node || !node.parentId) return false;
+    cursor = node.parentId;
+  }
+  return false;
+}
+
+async function moveNodes(ids, parentId) {
+  if (!ids || !ids.length) return refuse("nothing to paste");
+  const bad = await guard(ids);
+  if (bad) return refuse(bad);
+
+  const [target] = await chrome.bookmarks.get(parentId).catch(() => []);
+  if (!target || target.url) return refuse("the paste target is not a folder");
+
+  for (const id of ids) {
+    if (await isSelfOrDescendant(id, parentId)) {
+      return refuse("a folder cannot be moved inside itself");
+    }
+  }
+
+  const undo = await snapshot(ids);
+  let moved = 0;
+  let failed = 0;
+  // Sequentially, so the pasted items keep their relative order.
+  for (const id of ids) {
+    try { await chrome.bookmarks.move(id, { parentId }); moved++; }
+    catch { failed++; }
+  }
+  return { moved, failed, undo, targetTitle: target.title };
+}
+
+async function trashNodes(ids) {
+  if (!ids || !ids.length) return refuse("nothing to delete");
+  const bad = await guard(ids);
+  if (bad) return refuse(bad);
+
+  const folder = await findOrCreate("trash");
+  for (const id of ids) {
+    if (await isSelfOrDescendant(id, folder.id)) {
+      return refuse("that folder already contains trash");
+    }
+  }
+
+  const undo = await snapshot(ids);
+  let moved = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try { await chrome.bookmarks.move(id, { parentId: folder.id }); moved++; }
+    catch { failed++; }
+  }
+  return { moved, failed, undo, targetTitle: "trash" };
+}
+
+// The only genuinely destructive path. The UI reaches it solely from inside trash.
+async function removeNodes(ids) {
+  if (!ids || !ids.length) return refuse("nothing to remove");
+  const bad = await guard(ids);
+  if (bad) return refuse(bad);
+
+  let removed = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      const [node] = await chrome.bookmarks.get(id);
+      // remove() only accepts bookmarks and EMPTY folders.
+      if (node.url) await chrome.bookmarks.remove(id);
+      else await chrome.bookmarks.removeTree(id);
+      removed++;
+    } catch { failed++; }
+  }
+  return { removed, failed, undo: null };
+}
+
+// Nudge one node up or down inside its own folder.
+async function reorder(id, delta) {
+  if (PROTECTED.has(id)) return refuse("that folder cannot be reordered");
+
+  const [node] = await chrome.bookmarks.get(id).catch(() => []);
+  if (!node) return refuse("no such bookmark");
+  if (node.unmodifiable) return refuse("that bookmark is managed");
+
+  const siblings = await chrome.bookmarks.getChildren(node.parentId);
+  const from = siblings.findIndex((s) => s.id === id);
+  const to = from + delta;
+  if (to < 0 || to >= siblings.length) return refuse("already at the end");
+
+  const undo = [{ id, parentId: node.parentId, index: from }];
+
+  // Known Chrome quirk: moving to a HIGHER index within the same parent lands one
+  // short of the index asked for, because the node is removed before reinsertion.
+  // Firefox does not do this. Compensate, then verify -- this is buggy ground and
+  // the behaviour could change, so do not trust the arithmetic alone.
+  await chrome.bookmarks.move(id, { index: delta > 0 ? to + 1 : to });
+
+  const after = await chrome.bookmarks.getChildren(node.parentId);
+  const landed = after.findIndex((s) => s.id === id);
+  if (landed !== to) {
+    await chrome.bookmarks.move(id, { index: landed > to ? to : to + 1 });
+  }
+
+  const final = await chrome.bookmarks.getChildren(node.parentId);
+  return { moved: 1, failed: 0, undo, index: final.findIndex((s) => s.id === id) };
 }
 
 /* ----------------------------------------------------------------- activity */

@@ -89,6 +89,29 @@ grid, `←` collapses or goes to the parent. In the grid: `←→` step through 
 `↑↓` move between visual rows, `Ctrl+Enter` opens in a new tab, `←` on the first
 link returns to the rail. `Escape` leaves.
 
+### Editing
+
+| Action | Always | Vim set |
+|---|---|---|
+| mark / unmark | `Space` | `v` |
+| mark everything in view | `Ctrl+A` | — |
+| cut | `Ctrl+X` | `x` |
+| paste into the folder in the breadcrumb | `Ctrl+V` | `p` |
+| delete (moves to a `trash` folder) | `Delete` | `d` |
+| reorder within the folder | `Ctrl+↑` / `Ctrl+↓` | same |
+| undo | `Ctrl+Z` | same |
+
+With nothing marked, an operation acts on whatever has the cursor. `Escape` clears
+marks first and only leaves the pane once there are none.
+
+**Delete never removes anything** — it moves into a `trash` folder on the bookmarks
+bar. The Chrome API has no undo, and Chrome's own Ctrl+Z will not bring back
+something deleted through it, so everything here is a move and therefore reversible.
+Real removal happens only when you are *inside* trash, and asks first.
+
+Bookmarks bar, Other bookmarks and Mobile bookmarks cannot be moved or deleted —
+Chrome forbids it, and the panel refuses with a message rather than failing quietly.
+
 ### Freeing `hjkl` (optional)
 
 `hjkl` reach the page only if Vimium is told to pass them through. Vimium Options →

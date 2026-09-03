@@ -241,6 +241,53 @@
 }
 .sp-group-count { font-variant-numeric: tabular-nums; opacity: .7; }
 
+/* --------------------------------------------------- editing: the four states
+
+   Four things can be true of an item at once, so each gets a distinct channel
+   rather than competing for the same one:
+
+     cursor   -> the focus outline           (a ring)
+     marked   -> left accent bar + tint      (the left edge)
+     viewing  -> .selected fill              (rail only, a solid fill)
+     cut      -> dimmed + dashed             (reduced opacity)                  */
+
+.sp-rail-row.marked,
+.sp-link.marked {
+  background: rgba(57,135,229,.13);
+  box-shadow: inset 3px 0 0 var(--sp-accent);
+}
+.sp-rail-row.marked::after,
+.sp-link.marked::after {
+  content: "✓";
+  flex: none;
+  margin-left: .3rem;
+  font-size: .68rem;
+  color: var(--sp-accent);
+}
+
+.sp-rail-row.cut,
+.sp-link.cut {
+  opacity: .45;
+  outline: 1px dashed var(--sp-muted);
+  outline-offset: -2px;
+}
+
+/* The viewed folder keeps its solid fill, and stays legible when also marked. */
+.sp-rail-row.selected.marked { background: rgba(57,135,229,.3); }
+
+.sp-status {
+  flex: 1;
+  min-width: 0;
+  font-size: .7rem;
+  color: var(--sp-muted);
+  text-align: right;
+  padding-right: .6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-status-warn { color: #e8b339; }
+
 .sp-hit-path {
   flex: none;
   font-size: .64rem;
