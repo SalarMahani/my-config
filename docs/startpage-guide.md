@@ -58,12 +58,28 @@ Cloning the repo gets you the code. Chrome still needs telling about it.
    The images are not tracked (88M, and nothing names a specific file). Without
    them the page just says "No wallpapers indexed" and carries on.
 
-⚠️ **Two files hardcode `/home/albos`** and must name the real path of `~/StartPage`
-on a new machine: the content-script match in `manifest.json`, and `TARGET` in
-`newtab.js`. This is the repo's usual portability wart — see README §8.
+⚠️ **Four places hardcode `/home/albos`** and must name the real path of `~/StartPage`
+on a new machine. Find them all with:
 
-Then open a new tab and press `f`. If Vimium's link hints appear over the bookmark
-links, the whole design is working.
+```bash
+grep -rn "/home/albos" ~/StartPage --include="*.json" --include="*.js" --include="*.html"
+```
+
+| Where | Effect if left wrong |
+|---|---|
+| `manifest.json` — the content-script match | panels never load; the page is inert |
+| `newtab.js` — `TARGET` | the new tab redirects to a path that does not exist |
+| `newtab.html` — the file-access warning | shows the wrong path to fix |
+| `sw.js` — `HOME` | harmless: download paths just do not shorten to `~` |
+
+Deliberately left as four literals rather than derived from the manifest at runtime:
+this is one edit on one machine, and a literal path is easier to read and harder to
+break than `getManifest().content_scripts[0].matches[0]`.
+
+Then open a new tab. The clock and the bookmark panel should appear. **Vimium is
+optional** — without it every key reaches the page directly and everything here works;
+with it, press `f` and link hints should appear over the bookmark links, which
+confirms the `file://` design is doing its job.
 
 ## 3. Keys
 
