@@ -8,7 +8,7 @@
 // the page, but this worker only reloads when the extension does -- so "I edited
 // sw.js and nothing changed" is almost always a stale worker, not a bug. Open the
 // service worker console from chrome://extensions and read this line to be sure.
-const SW_VERSION = "2026-09-03 downloads+recent30";
+const SW_VERSION = "2026-09-05 shortcuts-shift-s";
 console.log("StartPage service worker", SW_VERSION);
 
 const DAY = 86400000;
@@ -45,6 +45,8 @@ async function handle(msg) {
       return await removeNodes(msg.ids);
     case "reorder":
       return await reorder(msg.id, msg.delta);
+    case "createFolder":
+      return await createFolder(msg.parentId, msg.title);
     case "activity":
       return await getActivity(msg.force);
     case "downloads":
@@ -241,6 +243,28 @@ async function removeNodes(ids) {
     } catch { failed++; }
   }
   return { removed, failed, undo: null };
+}
+
+// The one operation here that is not a move, so it is also the one with no undo
+// entry: Ctrl+Z stays "put each node back where it was". An unwanted folder is
+// removed the same way as anything else -- "d", which moves it to trash.
+//
+// guard() is deliberately not reused: its PROTECTED check is about nodes being
+// *moved*, and a folder created directly inside Bookmarks bar or Other is fine.
+// What matters here is only that the parent still exists and can hold children.
+async function createFolder(parentId, title) {
+  const name = (title || "").trim();
+  if (!name) return refuse("a folder needs a name");
+
+  const [parent] = await chrome.bookmarks.get(parentId).catch(() => []);
+  if (!parent) return refuse("that folder no longer exists");
+  if (parent.url) return refuse("a bookmark cannot hold a folder");
+  if (parent.unmodifiable) return refuse(`"${parent.title}" is managed and cannot be changed`);
+
+  // No index: create() appends, which is what the draft row in the rail is drawn
+  // to match.
+  const node = await chrome.bookmarks.create({ parentId, title: name });
+  return { id: node.id, title: name, parentTitle: parent.title };
 }
 
 // Nudge one node up or down inside its own folder.

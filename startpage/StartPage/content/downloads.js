@@ -199,7 +199,7 @@ SP.whenReady(() => {
         class: "sp-dl-erase",
         type: "button",
         tabindex: "-1",
-        title: "Remove from the list (x) — the file is not touched",
+        title: "Remove from the list (Shift+C) — the file is not touched",
         text: "✕",
       }),
     ]);
@@ -465,10 +465,11 @@ SP.whenReady(() => {
       if (e.key === "c" && e.ctrlKey) { e.preventDefault(); copyPath(it); return; }
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.key === "p") { e.preventDefault(); copyPath(it); return; }
-      // "x" removes the row, "d" removes the file. Different blast radius, so they
-      // are different keys and only one of them asks first. Delete is the alias
-      // that works without Vimium's pass-through rule.
-      if (e.key === "x" || e.key === "Delete") { e.preventDefault(); erase(it); return; }
+      // Shift+C removes the row, "d" removes the file. Different blast radius, so
+      // they are different keys and only one of them asks first. Neither "C" nor
+      // Delete needs Vimium's pass-through rule -- it binds neither. This was "x",
+      // which had to be given back: passing it through cost close-tab page-wide.
+      if (e.key === "C" || e.key === "Delete") { e.preventDefault(); erase(it); return; }
       if (e.key === "d") { e.preventDefault(); del(it); return; }
 
       const all = rows();
@@ -540,6 +541,9 @@ SP.whenReady(() => {
 
   function toggle(on) {
     root.classList.toggle(VIEW, on);
+    // The shortcuts view is the other half of this: exactly one view class is ever
+    // set, by construction rather than by luck. page/keys.js drops sp-dl the same way.
+    if (on) root.classList.remove("sp-keys");
     if (!on) {
       if (listEl.contains(document.activeElement)) document.activeElement.blur();
       return;

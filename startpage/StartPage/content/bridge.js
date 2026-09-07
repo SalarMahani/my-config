@@ -12,7 +12,7 @@
 // so a page reload alone can still run yesterday's content script -- only the
 // Reload button on chrome://extensions is guaranteed to pick up an edit. Open the
 // new tab's own console (F12) and read this line before debugging anything else.
-const SP_VERSION = "2026-09-03 paste-follows-cursor";
+const SP_VERSION = "2026-09-05 shortcuts-shift-s";
 console.log("StartPage content scripts", SP_VERSION);
 
 var SP = {

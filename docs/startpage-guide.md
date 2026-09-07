@@ -95,6 +95,10 @@ which is why the navigation uses them. That left `a`, `e` and `q` free — and t
 downloads view has now taken `q`, so **there are no free single keys left.** Anything
 new needs a modifier, or a pass-through rule ("Freeing `hjkl`" below).
 
+**The page documents itself now.** `Shift`+`S` opens a shortcuts view listing every
+key below, grouped by where it applies. This section is still the *why*; that view is
+the lookup, and it is what the footer used to be before the legend outgrew one line.
+
 | Key | Does |
 |---|---|
 | `.` / `,` | next / previous wallpaper (mirroring sway's `$mod+.` / `$mod+,`) |
@@ -104,6 +108,7 @@ new needs a modifier, or a pass-through rule ("Freeing `hjkl`" below).
 | `e` / `a` | focus the folder rail / the link grid |
 | `Shift`+`A` | focus "Pick up where you left off" in the Activity panel |
 | `q` | swap between the normal panels and the downloads view |
+| `Shift`+`S` | swap to the shortcuts view — every key on this page (`Escape` leaves) |
 | `↓↑←→` or `hjkl` | navigate within whichever pane has focus |
 | `f` | Vimium link hints, as everywhere else |
 
@@ -118,14 +123,37 @@ link returns to the rail. `Escape` leaves.
 |---|---|---|
 | mark / unmark | `Space` | `v` |
 | mark everything in view | `Ctrl+A` | — |
-| cut | `Ctrl+X` | `x` |
+| cut | `Ctrl+X` or `Shift`+`C` | — |
 | paste into the folder holding the cursor | `Ctrl+V` | `p` |
+| new folder, in the folder holding the cursor | `Shift`+`I` | — |
 | delete (moves to a `trash` folder) | `Delete` | `d` |
 | reorder within the folder | `Ctrl+↑` / `Ctrl+↓` | same |
 | undo | `Ctrl+Z` | same |
 
 With nothing marked, an operation acts on whatever has the cursor. `Escape` clears
 marks first and only leaves the pane once there are none.
+
+**New folder is `Shift`+`I`.** The name is typed in place: a draft row appears in the
+rail, indented under the target and positioned where the folder will actually land
+(Chrome appends, so it goes after the folder's existing subfolders). `Enter` creates it
+and puts the cursor on it — which is the point, because with something on the clipboard
+the next key is almost always `p`. `Escape`, clicking away, or an empty name all cancel.
+The whole flow is `Shift`+`C`, `Shift`+`I`, name, `Enter`, `p`, without leaving the page.
+
+It lands **in the folder holding the cursor**, by exactly the same rule as paste — so on
+a link in a labelled subfolder group, the new folder is created in *that* subfolder, not
+in the breadcrumb folder.
+
+**`Ctrl+Z` does not undo a create.** Everything else in this panel is a move, which is
+what makes one uniform undo possible; a create is not, so it pushes nothing onto the
+stack and `Ctrl+Z` still undoes the last actual move. A folder made by mistake goes away
+with `d`, like anything else.
+
+**Cut is `Shift`+`C`, not `x`.** `x` was the obvious vim letter for it, but a
+pass-through rule is matched *per URL*, not per pane — lending `x` to the bookmark
+panel lent it to the whole page, and Vimium's close-tab stopped working here. `C` is
+free (Vimium binds no bare `C`), so it needs no rule at all; unshifted `c` is still
+zen mode, and the handlers match the literal key, so the two never collide.
 
 **Paste lands in the folder holding the highlighted item, not the breadcrumb folder.**
 Selecting a parent lists each subfolder's links inline as labelled groups, so the
@@ -161,6 +189,33 @@ how focus arrived, so there was no reason to take Tab away.
 `.sp-recent` is in `page/scroll.js`'s `PANES`, or `j`/`k` inside it would move the
 cursor *and* scroll the page.
 
+### The shortcuts view
+
+`Shift`+`S` swaps the column over to a key reference, on exactly the mechanism the
+downloads view uses: one class on `<html>` (`sp-keys`), the other sections hidden.
+`page/keys.js` holds the whole list as a data array and renders it — page-side, since
+it needs no `chrome.*` API at all.
+
+Two things it deliberately does *not* copy from the downloads view:
+
+- **No `height:100vh` flex column.** That exists over there because the download list
+  scrolls inside itself. This is static text, so it flows and the *page* scrolls —
+  which `page/scroll.js` already drives with `j`/`k`, so there is no new pane to add
+  to its `PANES` list and no nested scroller to get wrong.
+- **Not persisted.** Zen mode is remembered across tabs; this is not, because a new
+  tab should not open on the help screen. The downloads view is the same.
+
+Opening it removes `sp-dl`, and `q` removes `sp-keys` — so exactly one view class is
+ever set, by construction rather than by luck. Zen still wins over both: it hides
+`.panels` outright, so `Shift`+`S` bails while `sp-zen` is on, just as `q` does.
+
+Like `Shift`+`C` and `Shift`+`I`, it needs **no pass-through rule** — Vimium binds no
+bare `S`. Unshifted `s` stays the filter in both panels, and every handler tests the
+literal `"s"`, so the two never collide. `Shift`+`K` was tried first and dropped:
+Vimium binds `K` to next-tab, so it would only have worked once `K` was passed
+through, and then it would have cost next-tab on this page. A help screen is not worth
+another key.
+
 ### Freeing `hjkl` (optional)
 
 `hjkl` reach the page only if Vimium is told to pass them through. Vimium Options →
@@ -173,6 +228,13 @@ Keys:     hjkl
 
 A non-empty key list keeps Vimium enabled on the page and passes only those keys, so
 `f` still works. Without the rule the arrows do everything anyway.
+
+To get the editing letters too, use `hjkldpv` instead. **Do not add `x`**: the rule is
+matched per URL, so a key lent to a panel is lent to the entire page, and `x` is
+Vimium's close-tab. That is why cut is `Shift`+`C` — a shifted letter Vimium does not
+bind reaches the page with no rule and costs nothing elsewhere, and the same reasoning
+picked `Shift`+`I` and `Shift`+`S`. **Nothing on this page needs a shifted key passed
+through**, and nothing should: a key that costs another key is the wrong trade.
 
 **`page/scroll.js` is the other half of this rule.** `passKeys` is matched per URL,
 not per focus, so the rule hands `hjkl` to the page *everywhere on it* — including
@@ -194,12 +256,13 @@ does nothing while zen is on, and `c` comes back out into whichever view was sho
 | Key | Does |
 |---|---|
 | `q` | enter / leave the downloads view |
+| `Shift`+`S` | leave for the shortcuts view |
 | `e` or `a` | put the cursor back in the list |
 | `j` `k` or `↓` `↑` | move down / up a column |
 | `h` `l` or `←` `→` | step back / forward in order |
 | `Home` / `End` | first / last row (`G` is Vimium's, `gg` is a prefix) |
 | `Enter` | show the file in Dolphin |
-| `x` or `Delete` | remove the row from the list — the file is not touched |
+| `Shift`+`C` or `Delete` | remove the row from the list — the file is not touched |
 | `d` | delete the file from disk, behind a `confirm()` |
 | `Ctrl+C` or `p` | copy the full path |
 | `s` | focus the filter |
@@ -216,7 +279,7 @@ browser, not assumed. Nothing inside an extension can supply a gesture from a ke
 on a page, so opening a file would need a native messaging host running `xdg-open`.
 Not worth a second moving part, given Dolphin is one keystroke away and opens files.
 
-**`x` removes the row, `d` removes the file.** Different blast radius, so they are
+**`Shift`+`C` removes the row, `d` removes the file.** Different blast radius, so they are
 different keys, and only `d` asks first — a history entry costs nothing on disk, which
 is also why Chrome's own row has a ✕ and no confirmation. Removing a row moves the
 cursor onto the one that takes its place (or the one above, if it was last) rather
@@ -229,9 +292,10 @@ bookmark panel's `e`/`a` handler bails while its own panel is hidden. Vimium's `
 not the way back: it hints the row's buttons, which act on a file rather than putting
 the cursor on it.
 
-`d`, `p`, `x` and `v` only arrive if Vimium's pass-through keys are extended past
-`hjkl` ("Freeing `hjkl`" above). `Ctrl+C`, `Enter` and the arrows work regardless, so the view is fully
-usable without touching Vimium's options.
+`d`, `p` and `v` only arrive if Vimium's pass-through keys are extended past `hjkl`
+("Freeing `hjkl`" above); `Shift`+`C` needs no rule, since Vimium binds no bare `C`.
+`Ctrl+C`, `Enter` and the arrows work regardless, so the view is fully usable without
+touching Vimium's options.
 
 #### Keys that two panels share
 

@@ -153,6 +153,50 @@ html.sp-dl header{ margin-bottom:.75rem; }
 html.sp-dl .dates{ margin-top:.25rem; font-size:.78rem; }
 html.sp-dl footer{ margin-top:.75rem; }
 
+/* Shortcuts view - the key reference alone, toggled with "Shift+S". Zen wins over
+   this too. Deliberately NO height:100vh flex column like the downloads view above:
+   that exists because the download list scrolls inside itself, and this is static
+   text. Letting it flow means the page scrolls, which page/scroll.js already drives
+   with j/k -- so there is no new pane to add to its PANES list. */
+#shortcuts{ display:none; }
+html.sp-keys #bookmarks,
+html.sp-keys #activity,
+html.sp-keys #downloads{ display:none; }
+html.sp-keys #shortcuts{ display:block; }
+
+.sp-keys-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
+    gap:.9rem 1.75rem;
+    align-items:start;
+}
+.sp-keys-group h3{
+    margin:0 0 .45rem;
+    font-size:.72rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--sp-accent);
+}
+.sp-keys-row{
+    display:flex;
+    align-items:baseline;
+    gap:.5rem;
+    padding:.12rem 0;
+    font-size:.76rem;
+    color:var(--sp-muted);
+}
+/* The keys column is fixed so every description starts at the same x, which is what
+   makes a list this long scannable. */
+.sp-keys-keys{ flex:none; width:8.5rem; text-align:right; color:var(--sp-text); }
+.sp-keys-what{ flex:1; min-width:0; }
+#shortcuts kbd{
+    background:rgba(255,255,255,.1);
+    border-radius:4px;
+    padding:.05rem .3rem;
+    font-family:inherit;
+}
+
 /* Zen mode - wallpaper, clock and dates only. Toggled with "c". */
 html.sp-zen .panels{ display:none; }
 html.sp-zen .shell{
@@ -223,18 +267,17 @@ try {
         <!-- Hidden until "q". It is a separate view rather than a third panel, so
              a long download history gets the whole column. -->
         <section class="panel" id="downloads"></section>
+        <!-- Hidden until "Shift+S". Filled in by page/keys.js, which needs no
+             chrome.* API, so it is a page script rather than a content script. -->
+        <section class="panel" id="shortcuts"></section>
     </div>
 
+    <!-- The key legend moved into its own view; what is left is the one key that
+         opens it, plus the wallpaper counter page/wallpaper.js writes here. Both
+         have to stay: zen mode fades this footer out and reveals it on hover, and
+         that hover is the only thing on screen naming a way back. -->
     <footer>
-        <kbd>.</kbd> / <kbd>,</kbd> wallpaper &nbsp; <kbd>w</kbd> random &nbsp;
-        <kbd>s</kbd> filter &nbsp; <kbd>c</kbd> zen &nbsp;
-        <kbd>e</kbd> folders &nbsp; <kbd>a</kbd> links &nbsp;
-        <kbd>q</kbd> downloads &nbsp;
-        <!-- Spelled out: every other key here is lowercase, so a bare "A" reads
-             as "a" -- which is already the link grid. -->
-        <kbd>Shift</kbd>+<kbd>A</kbd> recent &nbsp;
-        <kbd>&larr;&darr;&uarr;&rarr;</kbd> navigate &nbsp;
-        <kbd>f</kbd> Vimium hints
+        <kbd>Shift</kbd>+<kbd>S</kbd> shortcuts
         &nbsp;·&nbsp; <span id="wallpaper-hint"></span>
     </footer>
 
@@ -247,6 +290,7 @@ try {
 <script src="page/clock.js"></script>
 <script src="page/wallpaper.js"></script>
 <script src="page/zen.js"></script>
+<script src="page/keys.js"></script>
 <script src="page/scroll.js"></script>
 
 </body>

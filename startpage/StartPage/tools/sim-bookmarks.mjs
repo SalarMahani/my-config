@@ -227,5 +227,33 @@ await send({ type: "trashNodes", ids: ["1001"] });
 const trashes = find("1").node.children.filter((c) => c.title === "trash");
 check("exactly one trash folder", trashes.length === 1, String(trashes.length));
 
+console.log("\n=== create a folder ===");
+seed();
+const made = await send({ type: "createFolder", parentId: "100", title: "  grammar  " });
+check("lands in the named parent", names("100") === "a,b,c,d,grammar", names("100"));
+check("appended last, which is where the draft row is drawn",
+      find("100").node.children.at(-1).id === made.id, made.id);
+check("the name is trimmed", made.title === "grammar", JSON.stringify(made.title));
+check("reports the parent it went into", made.parentTitle === "GERMAN", made.parentTitle);
+check("no undo entry -- a create is not a move", made.undo === undefined);
+
+// A root is protected from being MOVED, but creating inside it is ordinary.
+const onBar = await send({ type: "createFolder", parentId: "1", title: "inbox" });
+check("a root can still be created in", Boolean(onBar.id) && !onBar.refused,
+      onBar.refused || onBar.id);
+
+find("11").node.unmodifiable = "managed";
+for (const [label, msg, expect] of [
+  ["a blank name", { type: "createFolder", parentId: "100", title: "   " }, /needs a name/],
+  ["a missing name", { type: "createFolder", parentId: "100" }, /needs a name/],
+  ["a link as parent", { type: "createFolder", parentId: "1000", title: "x" }, /cannot hold a folder/],
+  ["a parent that is gone", { type: "createFolder", parentId: "nope", title: "x" }, /no longer exists/],
+  ["a managed parent", { type: "createFolder", parentId: "11", title: "x" }, /is managed/],
+]) {
+  const r = await send(msg);
+  check(label + " refuses", expect.test(r.refused || ""), r.refused || "NOT REFUSED");
+}
+check("nothing was created by the refusals", names("100") === "a,b,c,d,grammar", names("100"));
+
 console.log(failures ? `\n${failures} FAILED` : "\nall passed");
 process.exit(failures ? 1 : 0);

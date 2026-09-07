@@ -168,6 +168,7 @@ SP.whenReady(() => {
   /* ------------------------------------------------------------------ rail */
 
   function renderRail() {
+    draftEl = null;   // whatever is on screen is about to be wiped with the rail
     railEl.textContent = "";
     for (const root of roots) {
       if (countLinks(root) === 0) continue;   // Mobile bookmarks is empty
@@ -355,7 +356,11 @@ SP.whenReady(() => {
     }
   }
 
-  const railRows  = () => [...railEl.querySelectorAll(".sp-rail-row")];
+  // The new-folder draft row wears .sp-rail-row too, for the [data-depth] indent
+  // and the rest of the rail's look -- but it is not a folder. Excluding it here
+  // keeps it out of the roving tabindex, paintStates() and every arrow calculation
+  // at once, rather than special-casing it in each.
+  const railRows  = () => [...railEl.querySelectorAll(".sp-rail-row:not(.sp-rail-draft)")];
   const gridLinks = () => [...contentEl.querySelectorAll(".sp-link")];
 
   function focusRailRow(row) {
@@ -414,6 +419,10 @@ SP.whenReady(() => {
   // Called from render(), once railEl and contentEl actually exist.
   function attachNavigation() {
   railEl.addEventListener("keydown", (e) => {
+    // The new-folder draft puts a real <input> inside a rail row, so this handler
+    // needs the same typing guard every document-level hotkey already has --
+    // without it, naming a folder "dpv" would delete, paste and mark instead.
+    if (SPTyping(e.target)) return;
     const row = e.target.closest && e.target.closest(".sp-rail-row");
     if (!row) return;
 
@@ -510,6 +519,7 @@ SP.whenReady(() => {
   const marked = new Set();     // ids ticked for a bulk operation
   let clipboard = [];           // ids cut, awaiting a paste
   let undoStack = [];           // [[{id, parentId, index}], ...]
+  let draftEl = null;           // the pending "new folder" row, if one is open
   let lastPane = null;          // "rail" | "grid" -- switching panes clears marks
 
   const UNDO_LIMIT = 20;
@@ -529,10 +539,18 @@ SP.whenReady(() => {
       }
     }
 
-    // The vim set only arrives if Vimium is passing these keys through for this URL.
+    // The vim letters (v, p, d) only arrive if Vimium is passing them through for
+    // this URL. The two shifted keys need no rule at all -- Vimium binds no bare "C"
+    // or "I", so they reach the page on their own.
+    //
+    // Cut was "x" until that turned out to cost Vimium's close-tab across the whole
+    // page: the pass-through rule is matched per URL, not per pane, so lending "x"
+    // to this panel lent it everywhere here. Shifted letters avoid that entirely,
+    // which is why a new folder is Shift+I and not the obvious "n" (find-next).
     switch (e.key) {
       case " ": case "v": return "mark";
-      case "x": return "cut";
+      case "C": return "cut";
+      case "I": return "newFolder";
       case "p": return "paste";
       case "d": case "Delete": return "delete";
       default: return null;
@@ -605,17 +623,23 @@ SP.whenReady(() => {
     if (undoStack.length > UNDO_LIMIT) undoStack.shift();
   }
 
+  // Put the cursor back on a node by id, after the panes have been rebuilt and the
+  // element that used to hold it no longer exists.
+  function restoreFocus(id, pane) {
+    if (!id) return;
+    if (pane === "rail") {
+      const row = railRows().find((r) => r.dataset.id === id);
+      if (row) focusRailRow(row);
+    } else {
+      const link = gridLinks().find((a) => a.dataset.id === id);
+      if (link) focusLink(link);
+    }
+  }
+
   // Rebuild from the live tree, then put the cursor back where it was.
   async function reload(focusId, pane) {
     await new Promise((resolve) => { load(resolve); });
-    if (!focusId) return;
-    if (pane === "rail") {
-      const row = railRows().find((r) => r.dataset.id === focusId);
-      if (row) focusRailRow(row);
-    } else {
-      const link = gridLinks().find((a) => a.dataset.id === focusId);
-      if (link) focusLink(link);
-    }
+    restoreFocus(focusId, pane);
   }
 
   async function runEdit(action, el, pane) {
@@ -649,6 +673,13 @@ SP.whenReady(() => {
         paintStates();
         status(ids.length + (ids.length === 1 ? " item cut" : " items cut")
                + " — paste lands in the folder holding the highlighted item");
+        return;
+      }
+
+      case "newFolder": {
+        // Same rule as paste, deliberately: the new folder lands in the folder
+        // holding whatever the cursor is on, not the one named in the breadcrumb.
+        openDraft(pasteTarget(el, pane), el, pane);
         return;
       }
 
@@ -724,6 +755,127 @@ SP.whenReady(() => {
     const name = folderName(entry.node).toLowerCase();
     return name === "trash" || entry.path.some((p) => p.toLowerCase() === "trash");
   };
+
+  /* -------------------------------------------------------------- new folder */
+
+  // Shift+I. The name is typed in place rather than through prompt(), and the draft
+  // row is drawn where the folder will actually land: chrome.bookmarks.create()
+  // appends, so it goes after the last row of the target's subtree, not directly
+  // under its heading.
+  //
+  // A create is the one operation here that is not a move, so it pushes nothing onto
+  // undoStack -- Ctrl+Z stays "put each node back where it was". A folder made by
+  // mistake is removed with "d", like anything else.
+
+  // The rail is a flat list: a folder's descendants are the rows that follow it with
+  // a greater depth. Returns the last of them, or the row itself if it has none.
+  function railSubtreeEnd(row) {
+    const depth = Number(row.dataset.depth);
+    let last = row;
+    for (let n = row.nextElementSibling; n; n = n.nextElementSibling) {
+      if (Number(n.dataset.depth) <= depth) break;
+      last = n;
+    }
+    return last;
+  }
+
+  // Idempotent, and it clears draftEl *before* removing the node: removing a focused
+  // element fires blur, and the blur listener must find nothing left to cancel.
+  function closeDraft() {
+    if (!draftEl) return;
+    const el = draftEl;
+    draftEl = null;
+    el.remove();
+  }
+
+  function openDraft(parentId, from, pane) {
+    closeDraft();
+    if (!parentId || !byId.has(parentId)) return status("no folder to create in", "warn");
+
+    const fromId = from && from.dataset ? from.dataset.id : null;
+
+    // Every ancestor has to be open or the target row is not in the rail at all --
+    // which is the normal case when the cursor was on a grid link inside a collapsed
+    // subtree. One renderRail() at the end, not one per level.
+    for (let a = parentId; a; a = (byId.get(a) || {}).parentId) expanded[a] = true;
+    chrome.storage.local.set({ [EXP_KEY]: expanded });
+    renderRail();
+
+    const row = railRows().find((r) => r.dataset.id === parentId);
+    if (!row) return status("that folder is not in the rail", "warn");
+
+    const input = SP.el("input", {
+      class: "sp-rail-input",
+      type: "text",
+      placeholder: "New folder…",
+      autocomplete: "off",
+      spellcheck: "false",
+    });
+    draftEl = SP.el("div", {
+      // Both classes: sp-rail-row for the indent and the look, sp-rail-draft so
+      // railRows() leaves it out. No data-id, so targets() can never pick it up.
+      class: "sp-rail-row sp-rail-draft",
+      "data-depth": String(Number(row.dataset.depth) + 1),
+    }, [SP.el("span", { class: "sp-twisty sp-twisty-empty" }), input]);
+
+    railSubtreeEnd(row).after(draftEl);
+    draftEl.scrollIntoView({ block: "nearest" });
+    input.focus();
+
+    const cancel = () => {
+      if (!draftEl) return;   // already committed; blur must not undo its status
+      closeDraft();
+      status("");
+      restoreFocus(fromId, pane);
+    };
+
+    input.addEventListener("keydown", (e) => {
+      // Enter and Escape are both bound on the rail as well. The typing guard there
+      // already covers it, but stop them here too rather than rely on ordering.
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        commitDraft(input.value, parentId, fromId, pane);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        cancel();
+      }
+    });
+    input.addEventListener("blur", cancel);
+
+    status("name the new folder in " + folderTitleOf(parentId)
+           + " — Enter to create, Escape to cancel");
+  }
+
+  async function commitDraft(value, parentId, fromId, pane) {
+    const title = (value || "").trim();
+    closeDraft();   // first, so the blur it fires finds nothing to cancel
+    if (!title) {
+      status("cancelled");
+      return restoreFocus(fromId, pane);
+    }
+
+    const res = await SP.send("createFolder", { parentId, title });
+    if (!res || res.error) {
+      status("failed: " + ((res && res.error) || "?"), "warn");
+      return restoreFocus(fromId, pane);
+    }
+    if (res.refused) {
+      status(res.refused, "warn");
+      return restoreFocus(fromId, pane);
+    }
+
+    // reload() re-reads expanded from storage, so the ancestors opened above have to
+    // be persisted before it runs or the new row would be hidden again.
+    await chrome.storage.local.set({ [EXP_KEY]: expanded });
+    // Land the cursor on the new folder: with something on the clipboard the next
+    // key is almost always "p", and clipboard survives the pane change.
+    await reload(res.id, "rail");
+    // Last -- reload -> focusRailRow -> enterPane can write "selection cleared".
+    status("created \u201c" + title + "\u201d in "
+           + ((res.parentTitle || "").trim() || folderTitleOf(parentId)));
+  }
 
   /* ------------------------------------------------------- tidy loose links */
 
