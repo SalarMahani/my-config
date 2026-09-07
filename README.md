@@ -162,7 +162,7 @@ sudo dnf install -y \
   waybar kitty rofi \
   zsh zsh-autosuggestions zsh-syntax-highlighting \
   eza jq python3 git vim-enhanced glow \
-  libnotify grimshot brightnessctl pulseaudio-utils wl-clipboard \
+  libnotify grimshot brightnessctl pulseaudio-utils wl-clipboard cliphist \
   papirus-icon-theme mako
 ```
 
@@ -204,7 +204,8 @@ What each is for, so you can drop what you do not want:
 | `mako` | **Displays** them. Without it notify-send blocks ~85s and nothing appears. Started by sway §6 |
 | `grimshot` | Screenshots (`Print`, bound by Fedora's sway config.d) |
 | `brightnessctl` `pulseaudio-utils` | Brightness and volume keys |
-| `wl-clipboard` | `wl-copy` / `wl-paste` |
+| `wl-clipboard` | `wl-copy` / `wl-paste` — the clipboard itself, and the watcher behind the history |
+| `cliphist` | Clipboard history (`$mod+v`). Stores what `wl-paste --watch` feeds it; see [docs/clipboard-guide.md](docs/clipboard-guide.md). The clipboard **constants** (`$mod+c`) add no dependency -- they need only `wl-clipboard`, `rofi`, `kitty` and `vim`, all already here |
 | `papirus-icon-theme` | Application icons in rofi |
 
 ## 2. Install the Nerd Font — `dnf` cannot do this

@@ -132,6 +132,13 @@ floating_modifier $mod normal
 for_window [class="xwaylandvideobridge"] floating enable, opacity 0, fullscreen disable, move to scratchpad
 # ────────────────────────────────────────────────────────────────────────────
 
+# The $EDITOR window that clip-const.sh opens for a clipboard constant
+# (see §7.6). It is a one-shot editor for a few lines of text, so tiling it
+# would rearrange the workspace you were working in for as long as it is open.
+# `kitty --class` is what sets app_id on Wayland; the name is arbitrary, but it
+# must match the one in the script.
+for_window [app_id="clip-const"] floating enable, resize set 900 600
+
 
 ### 6. Startup programs ####################################################
 
@@ -158,6 +165,22 @@ exec_always $scripts/waybar-restart.sh
 # unguarded exec_always would. Wrapped in `sh -c` so the `;` is unambiguously a
 # shell separator rather than something sway's own parser might act on.
 exec_always sh -c 'pkill -x mako; mako'
+
+# Clipboard history recorder, read back with $mod+v (§7.6). Sway ships no
+# clipboard manager, so without this every copy permanently replaces the last.
+#
+# The script starts two `wl-paste --watch cliphist store` processes — one for
+# text, one for images — and kills any previous pair first, so this
+# exec_always never stacks duplicates on a reload.
+#
+# It is a script rather than an inline `sh -c` for a specific reason: the
+# pkill pattern would appear in the wrapper shell's own command line and
+# `pkill -f` would kill its own parent. See the header of the script.
+#
+# Unlike swayidle below, this IS exec_always, so $mod+Shift+c does apply a
+# change to it. The history lives in ~/.cache/cliphist/db, so restarting the
+# watchers loses nothing.
+exec_always $scripts/clip-watch.sh
 
 # Idle chain: lock at 15:00, blank the screens at 15:05, lock before sleep.
 #
@@ -309,6 +332,46 @@ exec swayidle -w \
     # arrived while it was on. See docs/mako-guide.md.
     bindsym $mod+n exec makoctl mode -t dnd
     bindsym $mod+Shift+n exec makoctl dismiss -a
+
+    # Clipboard history. Opens a rofi list of what you have copied; Enter puts
+    # the chosen entry back on the clipboard, ready for the next Ctrl+V. It
+    # does not paste for you — there is no way to synthesise a keystroke into
+    # another window from here.
+    #
+    # Inside the list: Tab swaps over to the constants below, Ctrl+Delete
+    # removes one entry, Ctrl+Shift+Delete wipes the history (with a
+    # confirmation), Escape leaves it untouched. The last two are the only way
+    # to get a password or a token back out again; nothing filters those out on
+    # the way in.
+    #
+    # ⚠️ $mod is Alt, so this takes Alt+V away from every application on the
+    # machine, the same trade as every other binding here. See
+    # docs/keybinding-changes.md. Nothing on this system used it.
+    #
+    # The recorder half is on the exec_always in §6; without it this list is
+    # always empty.
+    bindsym $mod+v exec $scripts/clip-menu.sh
+
+    # Clipboard CONSTANTS — text you keep permanently rather than by accident:
+    # an email address, a postal address, an ssh one-liner. The history cannot
+    # hold these, because cliphist keeps only 750 items and dedupes, so
+    # anything you want forever eventually falls off the end of it.
+    #
+    # This key means "make me a constant" and never dead-ends. New text on the
+    # clipboard is pinned silently, so the fast flow is "Ctrl+C as usual, then
+    # $mod+c"; an already-saved, empty or image clipboard opens a BLANK one in
+    # the editor instead of refusing — pressing it twice is exactly what you do
+    # when you want a second constant. Reading the text under the mouse instead
+    # is not possible: Wayland has no such facility.
+    #
+    # They are read back in the second view of $mod+v, reached with Tab, where
+    # Ctrl+e edits one and Ctrl+Delete removes it. They live in
+    # ~/.local/share/clip-constants/ — deliberately NOT in this repo, which is
+    # published, and NOT in ~/.cache, which is disposable.
+    #
+    # ⚠️ Alt+C, on the same trade as Alt+V above. $mod+Shift+c stays "reload";
+    # $mod+Shift+v, the obvious mnemonic, was not free — it is splitv in §7.3.
+    bindsym $mod+c exec $scripts/clip-const.sh pin
 
     # Area screenshot — a second key for Ctrl+Print, which needs Fn on this
     # laptop's keyboard. The Print bindings themselves are NOT ours: they come

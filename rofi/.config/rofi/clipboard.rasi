@@ -1,0 +1,41 @@
+/* Clipboard history picker — the theme for $mod+v.
+ *
+ * Used by sway/.config/sway/scripts/clip-menu.sh as `rofi -theme clipboard`.
+ * A bare name, not a path: rofi appends .rasi and resolves it against
+ * ~/.config/rofi/ (see the "Multiple file handling" section of man
+ * rofi-theme). Prose guide: ~/dotfiles/docs/clipboard-guide.md
+ *
+ * ── The one line that matters ───────────────────────────────────────────────
+ * @import pulls in the whole launcher theme and MERGES it. That is the entire
+ * reason this file is nine lines of settings instead of ninety: the palette,
+ * the FiraCode Nerd Font, the square corners and the 1px accent outline stay
+ * defined in exactly one place, config.rasi, alongside waybar, mako and
+ * swaylock. Re-theming the desktop means editing that file and this one
+ * follows.
+ *
+ * Use @import, never @theme. @theme DISCARDS everything loaded before it, so
+ * it would throw the launcher theme away rather than build on it.
+ */
+@import "config.rasi"
+
+
+/* The launcher is 400px wide because an application name is short. A
+ * clipboard entry is a line of code, a URL or a shell command, so it needs
+ * the room — 800px is still under half of this 1366px screen. */
+window {
+    width: 800px;
+}
+
+/* 6 rows is right for the launcher, where you type three letters and press
+ * Enter. Scanning a clipboard history is a reading task instead, so show
+ * twice as many. 12 rows plus the input bar is roughly 430px, which sits
+ * comfortably on a 768px-tall screen. */
+listview {
+    lines: 12;
+}
+
+/* Inherited from config.rasi as "Search...", which says nothing about what is
+ * being searched once there are two of these popups on the same keyboard. */
+entry {
+    placeholder: "Search clipboard...";
+}

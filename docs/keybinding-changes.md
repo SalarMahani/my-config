@@ -6,6 +6,7 @@ Section [9](#9-markdown-reading-keys) covers keys that were *added* rather than 
 Section [10](#10-the-ctrll-trade-off) explains why `Ctrl+L` differs between kitty and VS Code.
 Section [11](#11-resizing-the-terminal) covers terminal resizing, and a command that never worked.
 Section [12](#12-the----family) lays out the four layers of `,` / `.`.
+Section [13](#13-clipboard--altv-and-altc) covers `Alt+V` and `Alt+C`, added later than the rest.
 
 If you only read one thing, read [§1](#1-what-to-retrain).
 
@@ -467,12 +468,93 @@ text. That single rule explains most of this document.
 
 ---
 
+## 13. Clipboard — `Alt+V` and `Alt+C`
+
+`Alt+V` added 2026-09-06, `Alt+C` added 2026-09-07. Nothing moved to make room
+for either; both were free in this config and in Fedora's `config.d`. Full
+guide: [clipboard-guide.md](clipboard-guide.md).
+
+| Key | Does |
+|---|---|
+| **`Alt+V`** | Open the clipboard picker in rofi, on the history |
+| **`Alt+C`** | Save the current clipboard as a permanent **constant**, or open a blank one when there is nothing new to pin |
+| `Enter` *(in the list)* | Put that entry back on the clipboard |
+| `Tab` *(in the list)* | Swap between the history and the constants |
+| `Ctrl+e` *(in the list)* | Edit this constant in `$EDITOR` |
+| `Ctrl+Delete` *(in the list)* | Delete this one entry or constant |
+| `Ctrl+Shift+Delete` *(in the list)* | Wipe the whole history — asks first |
+| `Escape` *(in the list)* | Leave; the clipboard is untouched |
+
+It does **not** paste. Enter makes the entry current, then `Ctrl+V` where you
+actually want it — which is why the key is `Alt+V` and not something unrelated.
+`Alt+C` is the other direction: `Ctrl+C` as usual, then `Alt+C` to keep it. It
+never dead-ends — pressed with nothing new on the clipboard it opens a blank
+constant in the editor, since pressing it twice is exactly what you do when you
+want a second one.
+
+### What they cost
+
+`$mod` is Alt, so these consume `Alt+V` and `Alt+C` **everywhere**, the standing
+trade for every binding in this config. Nothing on the machine used either:
+kitty, VS Code and Chrome all leave both unbound on Linux. Add them to the list
+in [§8](#8-the-rule-going-forward) of keys VS Code must not bind.
+
+`Alt+Shift+V` would have been the better mnemonic for "save a constant" and was
+**not** available — it is `splitv` in the sway config §7.3, which predates all
+of this. `Alt+Shift+C` is `reload` and is likewise untouched.
+
+### Why the in-list keys are `Ctrl+…` and not the obvious ones
+
+Two independent reasons, and both are worth remembering the next time a rofi
+binding is added:
+
+- **`Shift+Delete` is already taken by rofi**, as `kb-delete-entry`. rofi errors
+  out on a duplicate binding rather than picking a winner.
+- **rofi's own `-kb-custom-N` defaults are `Alt+1`, `Alt+2`, …, which are dead
+  on this machine.** Sway grabs every `Alt+<digit>` as a workspace jump before
+  rofi sees the key. Any rofi binding on an Alt combo that sway also binds is
+  silently inert — the same invisible collision that started this document.
+
+`Ctrl+…` is free in both, for the same reason it is the safe namespace in
+[§8](#8-the-rule-going-forward): sway binds zero `Ctrl+` combos.
+
+### The 2026-09-07 additions took two keys back off rofi
+
+`Tab` and `Ctrl+e` were not free either — rofi binds them to `kb-element-next`
+and `kb-move-end`. Unlike the two above, these were worth taking: `Tab` steps
+between a row's columns and this popup displays one, and `Ctrl+e` moves the
+cursor to the end of the input, which a search box barely needs.
+
+Both are given up **explicitly** on `clip-menu.sh`'s command line
+(`-kb-element-next ""`, `-kb-move-end ""`), because rofi refuses to start on a
+duplicate rather than picking a winner.
+
+⚠️ **Both are cleared, not moved.** `kb-move-end` was first pointed at `End`, on
+the reasoning that End does the same job — and `End` is `kb-row-last`, so
+`$mod+v` stopped opening at all. Clearing costs nothing here: `Right` and
+`Ctrl+f` still walk the input, and `End` keeps the more useful meaning in a list
+of "jump to the last row".
+
+The check before adding a third, and the one that would have caught this:
+
+```bash
+rofi -list-keybindings                        # every action and its keys
+timeout 3 rofi -dmenu <your flags> <<< test   # 124 + empty stderr = clean start
+```
+
+`rofi -dump-config` is **not** the check for either job: it lists only what has
+been *changed* from the defaults, and it parses a colliding flag set and exits 0
+without ever starting.
+
+---
+
 ## 8. The rule going forward
 
-**Do not bind Alt in VS Code.** Sway takes `h j k l a b e f n r s w x`, all
+**Do not bind Alt in VS Code.** Sway takes `h j k l a b c e f n r s v w x`, all
 digits, comma, period, space, minus, Return and the arrows — plus every
 `$mod+Shift+` variant of those. Only `alt+d` is currently free, and it is one
-sway edit away from not being.
+sway edit away from not being. (`v` joined that list on 2026-09-06 and `c` on
+2026-09-07; see [§13](#13-clipboard--altv-and-altc).)
 
 **Do not bind bare Ctrl+letter for anything that should work in the terminal.**
 Those are control characters.

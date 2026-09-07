@@ -13,6 +13,7 @@ Written for albos · Fedora 44 · Acer laptop (Intel i915), coming from KDE Plas
 | [kitty-guide.md](kitty-guide.md) | The terminal — fonts, themes, the theme-marker mechanism | Terminal colours, font size, ligatures, scrollback |
 | [rofi-guide.md](rofi-guide.md) | The launcher — modes, the rasi language, the widget tree | `$mod+space` behaves oddly, or you want to resize/restyle the popup |
 | [mako-guide.md](mako-guide.md) | Notifications — sender vs displayer, criteria, do-not-disturb | Notifications look wrong, do not appear, or stay too long |
+| [clipboard-guide.md](clipboard-guide.md) | Clipboard — the `wl-paste` → `cliphist` → rofi chain behind `$mod+v`, the permanent **constants** behind `$mod+c`, and getting a secret back out | `$mod+v` shows nothing, an entry will not paste back, or you copied a password |
 | [vscode-guide.md](vscode-guide.md) | VS Code — settings, Vim mode, keybindings, extensions | Editor settings, a keybinding not firing, setting up a new machine |
 | [shell-guide.md](shell-guide.md) | zsh — startup order, zinit, Powerlevel10k, history, vi mode | Aliases, PATH, prompt, completion, "why did my change not apply" |
 | [terminal-vs-shell.md](terminal-vs-shell.md) | The concept — what kitty is vs what zsh is, the PTY between them, which one to configure | You are not sure whether a setting belongs to the terminal or the shell, or why a keybinding never arrives |
@@ -51,6 +52,7 @@ you saved a file. How a change is applied differs per program:
 | kitty | `Ctrl+Shift+F5`, or a new window |
 | rofi | Nothing — read fresh on every launch |
 | mako | `makoctl reload` |
+| Clipboard history and constants | `$mod+Shift+c` restarts the recorder (`exec_always`); the rofi picker, its theme and the constants are all read fresh on every launch |
 | zsh | New terminal, or `exec zsh` |
 | vim | `:source ~/.vimrc`, or restart |
 | VS Code | Nothing — settings apply live |

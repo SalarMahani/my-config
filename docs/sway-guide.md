@@ -265,6 +265,9 @@ your session looks broken without them:
 | `~/.config/waybar/style.css` | Bar colours and fonts |
 | `~/Pictures/wallpapers/` | Wallpapers, including `lock-001.png` used by `lock.sh` |
 | `~/.cache/sway-wallpaper-index` | Which wallpaper is next; regenerates if deleted |
+| `~/.config/rofi/clipboard.rasi` | The `$mod+v` clipboard popup's theme; imports `config.rasi` |
+| `~/.cache/cliphist/db` | The clipboard history itself — **not tracked, not encrypted**; safe to delete |
+| `~/.local/share/clip-constants/` | The clipboard **constants** ($mod+c, and Tab inside $mod+v) — **not tracked, not encrypted**; nothing else has a copy, so *not* safe to delete |
 
 **Commands that answer "where is this coming from?"**
 
@@ -812,6 +815,54 @@ Full walkthrough in **[mako-guide.md](mako-guide.md)**, including the one trap
 worth knowing: `default-timeout=0` inside a criteria section is silently
 overridden by the sender unless you also set `ignore-timeout=1`.
 
+### `clip-watch.sh` — `exec_always`; `clip-menu.sh` — `$mod+v`; `clip-const.sh` — `$mod+c`
+
+The three parts of the clipboard. Wayland keeps no history of its own: the
+clipboard holds one value, and replacing it destroys the previous one.
+
+`clip-watch.sh` starts two `wl-paste --watch cliphist store` processes, one for
+text and one for images, having killed any previous pair first — the same
+kill-then-start shape as `waybar-restart.sh` below. `clip-menu.sh` reads that
+history back into a rofi list on `$mod+v`; Enter puts the chosen entry on the
+clipboard, `Ctrl+Delete` removes one entry and `Ctrl+Shift+Delete` wipes the lot.
+
+`clip-const.sh` is the third part, added 2026-09-07. The history is transient —
+cliphist keeps 750 entries and dedupes — so text you want *permanently* lives in
+`~/.local/share/clip-constants/` instead, one plain file each. `$mod+c` pins the
+current clipboard there, or opens a blank one in the editor when there is
+nothing new to pin; `Tab` inside `$mod+v` swaps the list over to them, where
+`Ctrl+e` edits one (a floating kitty, via the
+`for_window [app_id="clip-const"]` rule in §5) and `Ctrl+Delete` removes it.
+
+⚠️ The editor is `${VISUAL:-vim}`, **not** `$EDITOR`: Fedora's
+`nano-default-editor` package exports `EDITOR=/usr/bin/nano` from
+`/etc/profile.d/`, machine-wide, and sway inherits it at login. Override with
+`export VISUAL=...` in `~/.zshenv` — `~/.zshrc` is not read by a sway session.
+
+Three traps worth carrying over from
+**[clipboard-guide.md](clipboard-guide.md)**, which has the full walkthrough:
+
+- ⚠️ The recorder **cannot** be an inline `exec_always sh -c 'pkill -f "…"; …'`.
+  `pkill -f` matches whole command lines, and the wrapper shell's own command
+  line would contain the pattern — it kills its own parent. That is also why
+  the file is `clip-watch.sh` and not `cliphist-watch.sh`. ⚠️ **`clip-const.sh`
+  is under the same naming rule** — the same `pkill -f` would match it too.
+- ⚠️ `Tab` and `Ctrl+e` are rofi defaults (`kb-element-next`, `kb-move-end`), and
+  rofi **refuses to start** on a duplicate binding rather than picking a winner.
+  `clip-menu.sh` clears both explicitly — clears, never *moves*, since the
+  obvious new home for `kb-move-end` is `End` and that is `kb-row-last`. The
+  symptom of getting this wrong is `$mod+v` doing nothing, with the error
+  swallowed by sway; run the script from a terminal to see it.
+- Unlike `swayidle` in [§8](#8-your-idle-and-lock-chain), this is `exec_always`,
+  so `$mod+Shift+c` **does** apply a change to it. The history is on disk, so
+  restarting the watchers loses nothing. The `for_window` rule and the `$mod+c`
+  binding, being plain config, need the reload too.
+
+**Everything you copy is stored, passwords included, unencrypted in
+`~/.cache/cliphist/db` — and a constant you pin is likewise unencrypted in
+`~/.local/share/clip-constants/`.** `Ctrl+Shift+Delete` in the picker, or `cliphist wipe`,
+is how you get one back out.
+
 ### `waybar-restart.sh` — bound to `exec_always`
 
 ```bash
@@ -1007,6 +1058,8 @@ need no mode.
 | `Alt+Shift+w` | Next wallpaper |
 | `Alt+n` | Toggle do-not-disturb (mako) |
 | `Alt+Shift+n` | Dismiss all notifications |
+| `Alt+v` | Clipboard picker — pick an old entry back onto the clipboard, or `Tab` to the constants |
+| `Alt+c` | Save the current clipboard as a permanent constant |
 | `Alt+Pause` | Passthrough mode — suspends all sway bindings *(system)* |
 
 ### Media and hardware *(all system)*

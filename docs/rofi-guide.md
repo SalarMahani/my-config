@@ -70,6 +70,53 @@ Consequence: this file must define everything it wants. That is why there are
 rules for `element-text` and `element-icon` that look redundant — nothing is
 inherited.
 
+### `@import` is the opposite of `@theme`
+
+There is a second `.rasi` in this package now — **`clipboard.rasi`**, the theme
+for the `$mod+v` clipboard history popup (see
+[clipboard-guide.md](clipboard-guide.md)). It is nine lines long, and its first
+one is the reason:
+
+```rasi
+@import "config.rasi"
+```
+
+| Directive | Does |
+|---|---|
+| `@theme "file"` | **Discards** everything loaded so far, then loads the file |
+| `@import "file"` | **Merges** the file into what is already loaded |
+
+So `@theme "/dev/null"` above wipes rofi's defaults, and `@import "config.rasi"`
+in the other file builds on this one. Using `@theme` there would have thrown
+away the very theme it wanted.
+
+That is what keeps the palette in one place: `clipboard.rasi` says only what a
+clipboard list needs differently from a launcher — `window { width: 800px; }`,
+`listview { lines: 12; }` and a placeholder. Re-theme *this* file and the popup
+follows.
+
+It is loaded as `rofi -theme clipboard` — a bare **name**, not a path. rofi
+appends `.rasi` and resolves it against the directory of the importing file,
+then `~/.config/rofi/themes/`, then `~/.config/rofi/` (`man rofi-theme`,
+"Multiple file handling").
+
+To check what a combination actually resolves to, without opening a window:
+
+```bash
+rofi -theme clipboard -dump-theme
+```
+
+**What is *not* in this file:** the popup's two views. `clip-menu.sh` swaps the
+prompt and the placeholder per view with `-p` and `-theme-str` on the command
+line, and it holds all the keybindings — including the two rofi defaults it has
+to clear first (`-kb-element-next ""`, `-kb-move-end ""`), because rofi refuses
+to start on a duplicate binding — and clearing is the only safe move, since
+`End`, the obvious place to put `kb-move-end` instead, is itself `kb-row-last`.
+`rofi -list-keybindings` is the authority on what is already taken;
+`-dump-config` is not, as it parses a colliding flag set without complaint. Keeping those out of the `.rasi` is
+what lets it stay nine lines of pure theme. See
+[clipboard-guide.md](clipboard-guide.md).
+
 ---
 
 ## 3. Settings — the `configuration` block
