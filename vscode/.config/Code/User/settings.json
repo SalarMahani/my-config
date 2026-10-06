@@ -1,5 +1,6 @@
 {
   //---------- Editor Interface
+
   "workbench.colorTheme": "Monokai Pro (Filter Spectrum)",
   "workbench.iconTheme": "Monokai Pro (Filter Spectrum) Icons",
   "editor.lineNumbers": "on",
@@ -159,7 +160,31 @@
   ],
 
   //---------- Formatting & Linting
+  "[python]": {
+  "editor.defaultFormatter": "charliermarsh.ruff",
+  "editor.formatOnSave": true
+  },
+
+"[javascript]": {
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+  },
+
+"[javascriptreact]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+  },
+
+"[typescript]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+  },
+
+"[typescriptreact]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+  },
+  // "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "files.autoSave": "onFocusChange",
   "prettier.requireConfig": true,

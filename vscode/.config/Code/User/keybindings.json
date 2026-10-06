@@ -1276,6 +1276,16 @@
   "key": "ctrl+/",
   "command": "-editor.action.accessibleViewAcceptInlineCompletion",
   "when": "accessibleViewIsShown && accessibleViewCurrentProviderId == 'inlineCompletions'"
+},
+{
+  "key": "shift+w",
+  "command": "quokka.makeQuokkaFromExistingFile",
+  "when": "!quokka.isLiveShareClient && !terminalFocus"
+},
+{
+  "key": "shift+q",
+  "command": "quokka.stopCurrent",
+  "when": "quokka.hasActiveSession && !quokka.isLiveShareClient && !terminalFocus"
 }
 ]
 
