@@ -101,10 +101,22 @@ Notable normal-mode mappings:
 | `<leader>e` | Quick fix |
 | `<leader>a` | Focus explorer |
 | `<leader>l` | Focus terminal |
+| `<leader>m` | Markdown: swap the tab to its preview and back (see [keybinding-changes §9](keybinding-changes.md#9-markdown-reading-keys)) |
 | `<leader>sl` / `<leader>sr` | Move editor to left/right group |
 | `H` / `L` | Start / end of line (`^` and `$`) |
 | `,` / `.` | Previous / next editor |
 | `<` / `>` | Move editor left / right in group |
+
+⚠️ **These only exist while a file is open.** They belong to VSCodeVim, and Vim
+only sees keys while a text editor has focus — close the last tab and `Space`
+reaches nothing. `<leader>l` and `<leader>w` are therefore bound a second time
+in `keybindings.json`, as the native chords `space l` and `space w`, scoped to
+`activeEditorGroupEmpty` and to focus being outside the sidebar, the panel, the
+secondary sidebar and any input. The scoping is what keeps the two from
+colliding: with a file open Vim owns the keys, and the explorer keeps `Space`
+for preview and type-to-filter. The other leader keys have no such fallback.
+A chord is written `"space w"` — a bare space between the keys. The older
+`"space + w"` parsed as three keys (`Space`, `+`, `w`) and never fired.
 
 `H`/`L` and `,`/`.` are worth noting — `,` and `.` do the same job in sway
 (previous/next workspace on the monitor), so the same two keys mean "step

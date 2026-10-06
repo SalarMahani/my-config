@@ -311,6 +311,30 @@ This is also why `Ctrl+L` had to be freed from VS Code first — see
 only tab, which is the case coming from `md`. Without that branch it fails with
 `E784: Cannot close last tab page`.
 
+### In VS Code
+
+| Key | Does |
+|---|---|
+| **`<leader>m`** | swap a `.md` tab between *Open as Preview* and *Reopen as source file*, in place |
+
+The same key as `:Glow` in vim, so "render this Markdown" is one key in both
+editors. It is `markdown.togglePreview`, which VS Code ships on `Ctrl+Shift+V` —
+the key `keybindings.json` gives to paste in the editor, so from the source side
+the default never fired.
+
+One key, two bindings, because the two sides are owned by different things:
+
+- **Source → preview** is a VSCodeVim mapping in `settings.json`, since Vim
+  owns `Space` in a text editor.
+- **Preview → source** is the native chord `space m` in `keybindings.json`.
+  The preview is a webview, Vim is not running in it, and the webview forwards
+  every keydown to VS Code — which is what lets a native chord fire there.
+
+Two side effects. `Space` still scrolls the preview a little before `m` lands,
+because the forwarded key also reaches the page. And Vim mappings cannot be
+scoped to a language, so `<leader>m` on a non-Markdown file renders it as
+Markdown — press it again to get the file back.
+
 ---
 
 ## 10. The `Ctrl+L` trade-off

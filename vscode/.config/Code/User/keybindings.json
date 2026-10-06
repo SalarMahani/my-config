@@ -11,8 +11,12 @@
     "when": "accessibilityHelpIsShown"
   },
   {
-    "key": "space + w",
-    "command": "workbench.action.openGlobalKeybindings"
+    // <leader>w with nothing open -- see `space l` for why the scoping. Was
+    // "space + w", which VS Code parses as three keys (Space, +, w) and so
+    // never fired; a chord is written with a bare space between its keys.
+    "key": "space w",
+    "command": "workbench.action.openGlobalKeybindings",
+    "when": "activeEditorGroupEmpty && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus"
   },
   {
     "key": "ctrl+k ctrl+s",
@@ -503,6 +507,16 @@
     "key": "ctrl+shift+v",
     "command": "editor.action.clipboardPasteAction",
     "when": "editorTextFocus"
+  },
+  {
+    // Markdown preview -> source, the way back out of <leader>m (settings.json).
+    // The preview is a webview, so Vim never sees this Space; the webview
+    // forwards every keydown to VS Code, which is what lets a native chord
+    // fire there. activeCustomEditorId stays set while focus is elsewhere, so
+    // the sidebar, panel and inputs are excluded to keep their own Space.
+    "key": "space m",
+    "command": "markdown.togglePreview",
+    "when": "activeCustomEditorId == 'vscode.markdown.preview.editor' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus"
   },
   {
     "key": "ctrl+v",
@@ -1035,6 +1049,16 @@
   "when": "codeActionMenuVisible"
 },
 ///
+{
+  // <leader>l with nothing open. The settings.json mapping is VSCodeVim's, and
+  // Vim only sees keys while a text editor has focus -- an empty editor group
+  // has none, so Space l went nowhere. Same chord, same command, but only in
+  // that state: with a file open Vim keeps it, and the sidebar, panel and any
+  // input keep their own Space (explorer preview, type-to-filter, typing).
+  "key": "space l",
+  "command": "workbench.action.terminal.focus",
+  "when": "activeEditorGroupEmpty && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus"
+},
 // DELETED: alt+l -> terminal.focus. Dead to sway ($mod+l = focus right), and
 // redundant: settings.json binds <leader>l to the same command in vim normal
 // mode, and ctrl+shift+l toggles the panel from anywhere.

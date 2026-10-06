@@ -114,6 +114,16 @@
     "before": ["<leader>", "t"],
     "commands": ["workbench.action.terminal.openNativeConsole"]
     },
+
+    // <leader>m = swap a .md tab to its rendered preview, in place -- the same
+    // key as :Glow in ~/.vimrc. This is only the way IN: the preview is a
+    // webview, Vim is not running there, so the way back out is the `space m`
+    // chord in keybindings.json. Vim mappings cannot be scoped to a language,
+    // so on a non-Markdown file this renders it as Markdown; press it again.
+    {
+    "before": ["<leader>", "m"],
+    "commands": ["markdown.togglePreview"]
+    },
   ],
 
   //---------- Vim Visual Mode
