@@ -23,3 +23,5 @@
 # refuse to commit until you create the file and set user.name / user.email.
 [include]
 	path = ~/.gitconfig.local
+[credential]
+	helper = store

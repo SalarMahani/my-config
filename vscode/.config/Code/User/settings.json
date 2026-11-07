@@ -230,7 +230,8 @@
   "breadcrumbs.icons": false,
   "breadcrumbs.showFunctions": false,
   "workbench.activityBar.location": "hidden",
-  "color-highlight.matchHslWithNoFunction": true
+  "color-highlight.matchHslWithNoFunction": true,
+  "claudeCode.preferredLocation": "panel"
 
 }
 
